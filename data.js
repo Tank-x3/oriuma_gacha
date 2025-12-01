@@ -60,7 +60,7 @@ const CHARACTERS_R3 = [
     { id: "301", name: "［日ノ本断ツ大太刀］ネネキリミソギ", quote: "Test" },
     { id: "302", name: "［Becoming The Legacy］ディレツェッド", quote: "Test" },
     { id: "303", name: "［Dual Movement］デュオモンテ", quote: "Test" },
-    { id: "304", name: "［星空を見上げて！！！］ホルススターズアイ", quote: "Test" },
+    { id: "304", name: "［星空を見上げて！！！］ホルススターズアイ", quote: "「天才の私が、勝利という輝きをあなたに魅せてあげます！！！」" },
     { id: "305", name: "［原初を穿つダートフォージ］ガンエレメンツ", quote: "Test" },
     { id: "306", name: "［超越せし帝王］ジャックラパット", quote: "Test" },
 ];
@@ -87,4 +87,5 @@ const CHARACTERS_R1 = [
     { id: "108", name: "［Command?→623!］ワンクレジット", quote: "" },
     { id: "109", name: "［日本の中核］ベイワインレッド", quote: "" },
     { id: "110", name: "［軌跡の繋ぎ手］ハイムリーゼ", quote: "" },
+
 ];
