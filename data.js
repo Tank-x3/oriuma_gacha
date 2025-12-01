@@ -57,12 +57,12 @@ const GATE_TEXTS = {
 
 // ★3 キャラクターリスト
 const CHARACTERS_R3 = [
-    { id: "301", name: "［日ノ本断ツ大太刀］ネネキリミソギ", quote: "" },
-    { id: "302", name: "［Becoming The Legacy］ディレツェッド", quote: "" },
-    { id: "303", name: "［Dual Movement］デュオモンテ", quote: "" },
-    { id: "304", name: "［星空を見上げて！！！］ホルススターズアイ", quote: "" },
-    { id: "305", name: "［原初を穿つダートフォージ］ガンエレメンツ", quote: "" },
-    { id: "306", name: "［超越せし帝王］ジャックラパット", quote: "" },
+    { id: "301", name: "［日ノ本断ツ大太刀］ネネキリミソギ", quote: "Test" },
+    { id: "302", name: "［Becoming The Legacy］ディレツェッド", quote: "Test" },
+    { id: "303", name: "［Dual Movement］デュオモンテ", quote: "Test" },
+    { id: "304", name: "［星空を見上げて！！！］ホルススターズアイ", quote: "Test" },
+    { id: "305", name: "［原初を穿つダートフォージ］ガンエレメンツ", quote: "Test" },
+    { id: "306", name: "［超越せし帝王］ジャックラパット", quote: "Test" },
 ];
 
 // ★2 キャラクターリスト
