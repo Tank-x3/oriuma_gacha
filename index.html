@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>オリウマ ガチャシミュレーター</title>
+    <link rel="stylesheet" href="style.css?v=1.0">
+</head>
+<body>
+
+    <div class="main-container">
+        <header>
+            <h1>オリウマ ガチャ</h1>
+        </header>
+
+        <div id="display-area">
+            <div id="gate-text-area" class="gate-text hidden"></div>
+            
+            <ul id="result-list">
+                <li class="placeholder-text">「ガチャを引く」ボタンを押してください</li>
+            </ul>
+        </div>
+
+        <div class="control-area">
+            <button id="btn-single" class="gacha-btn" onclick="pullGacha(1)">単発で引く</button>
+            <button id="btn-multi" class="gacha-btn primary" onclick="pullGacha(10)">10連で引く</button>
+            
+            <button id="btn-skip" class="action-btn hidden" onclick="skipAnimation()">SKIP ▶▶</button>
+            <button id="btn-reset" class="action-btn hidden" onclick="resetGacha()">もう一度引く</button>
+        </div>
+    </div>
+
+    <script src="data.js?v=1.0"></script>
+    <script src="script.js?v=1.0"></script>
+</body>
+</html>
