@@ -49,13 +49,13 @@ header h1 {
     flex-direction: column;
 }
 
-/* ゲートテキスト（Eclipse first... 等） */
+/* ゲートテキスト */
 .gate-text {
-    font-family: 'Times New Roman', serif; /* 格式高い雰囲気 */
+    font-family: 'Times New Roman', serif;
     font-style: italic;
     text-align: center;
     font-size: 18px;
-    color: #FFD700; /* 金色 */
+    color: #FFD700;
     margin-bottom: 15px;
     padding-bottom: 10px;
     border-bottom: 1px solid #444;
@@ -71,10 +71,13 @@ header h1 {
 }
 
 #result-list li {
-    padding: 8px 5px;
+    padding: 10px 5px; /* 上下余白を少し追加 */
     border-bottom: 1px dashed #333;
     font-size: 16px;
+    
+    /* レイアウト変更: 折り返しを許可してセリフを次行へ */
     display: flex;
+    flex-wrap: wrap; 
     align-items: center;
     min-height: 24px;
 }
@@ -86,6 +89,7 @@ header h1 {
     color: #4CAF50;
     font-weight: bold;
     margin-right: 5px;
+    flex-shrink: 0; /* 幅固定 */
 }
 
 /* 点滅アニメーション */
@@ -104,6 +108,7 @@ header h1 {
     color: #777;
     text-align: center;
     margin-top: 50px;
+    width: 100%;
 }
 
 /* =========================================
@@ -113,6 +118,7 @@ header h1 {
     font-weight: bold;
     margin-right: 10px;
     letter-spacing: 2px;
+    flex-shrink: 0; /* 星が潰れないように */
 }
 
 /* ★1: 銀色/白 */
@@ -123,33 +129,55 @@ header h1 {
 .rarity-2 {
     color: #FFD700;
 }
-/* ★3: 虹色（グラデーションで表現） */
+/* ★3: 虹色 */
 .rarity-3 {
     background: linear-gradient(to right, #ff5e62, #ff9966, #ffff00, #39ff14, #00ffff, #0000ff, #ff00ff);
     -webkit-background-clip: text;
     color: transparent;
     font-weight: 900;
 }
+/* ★4: シークレット（激レア） */
+.rarity-4 {
+    background: linear-gradient(to right, #ff00cc, #333399, #ff00cc);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    color: transparent;
+    font-weight: 900;
+    font-size: 1.2em;
+    text-shadow: 0 0 10px rgba(255, 0, 204, 0.5);
+    animation: shine 2s linear infinite;
+}
+
+@keyframes shine {
+    to { background-position: 200% center; }
+}
 
 /* キャラクター名 */
 .char-name {
     font-weight: normal;
+    white-space: nowrap; /* 名前での折り返しを防止 */
+    margin-right: auto; /* 右側余白を埋める */
 }
-/* ★3キャラ名は強調 */
-.char-name.rarity-3 {
+/* ★3, ★4 キャラ名は強調 */
+.char-name.rarity-3,
+.char-name.rarity-4 {
     font-weight: bold;
     color: #fff;
     text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
 }
 
-/* 獲得時セリフ（★3のみ） */
+/* 獲得時セリフ（★3, ★4のみ） */
 .char-quote {
-    display: block;
+    /* 強制的に次の行へ */
+    width: 100%; 
+    flex-basis: 100%;
+    
     font-size: 12px;
     color: #aaa;
-    margin-top: 2px;
-    margin-left: 25px; /* マーカー分インデント */
+    margin-top: 5px; /* 名前との間隔 */
+    padding-left: 35px; /* マーカー+星の分インデント */
     font-style: italic;
+    line-height: 1.4;
 }
 
 /* =========================================
@@ -177,24 +205,20 @@ header h1 {
     background-color: #666;
 }
 
-/* 10連ボタン（強調） */
 .gacha-btn.primary {
-    background-color: #4CAF50; /* 緑 */
+    background-color: #4CAF50;
     font-weight: bold;
 }
-
 .gacha-btn.primary:hover {
     background-color: #45a049;
 }
 
-/* ボタン無効化時 */
 .gacha-btn:disabled {
     background-color: #222;
     color: #555;
     cursor: not-allowed;
 }
 
-/* アクションボタン（スキップ・リセット） */
 .action-btn {
     flex: 1;
     padding: 15px;
@@ -202,14 +226,13 @@ header h1 {
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    background-color: #2196F3; /* 青 */
+    background-color: #2196F3;
     color: white;
 }
 .action-btn:hover {
     background-color: #0b7dda;
 }
 
-/* ユーティリティ */
 .hidden {
     display: none !important;
 }
