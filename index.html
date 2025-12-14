@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>オリウマ ガチャシミュレーター</title>
     <link rel="stylesheet" href="style.css?v=1.3">
 </head>
+
 <body>
 
     <div class="main-container">
@@ -16,7 +18,7 @@
         <div id="info-area" class="info-banner hidden"></div>
 
         <div id="stats-area" class="stats-container">
-            </div>
+        </div>
 
         <div id="display-area">
             <div id="gate-text-area" class="gate-text hidden"></div>
@@ -28,7 +30,7 @@
         <div class="control-area">
             <button id="btn-single" class="gacha-btn" onclick="pullGacha(1)">単発で引く</button>
             <button id="btn-multi" class="gacha-btn primary" onclick="pullGacha(10)">10連で引く</button>
-            
+
             <button id="btn-skip" class="action-btn hidden" onclick="skipAnimation()">SKIP ▶▶</button>
             <button id="btn-reset" class="action-btn hidden" onclick="resetGacha()">もう一度引く</button>
         </div>
@@ -43,10 +45,13 @@
             <span class="close-btn" onclick="closeHistory()">&times;</span>
             <h2>ガチャ履歴 (最新100件)</h2>
             <div id="history-list" class="history-list-container">
-                </div>
+            </div>
             <button class="clear-history-btn" onclick="clearHistory()">履歴を削除</button>
         </div>
     </div>
+
+    <!-- Image Generation Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image-more/3.3.0/dom-to-image-more.min.js"></script>
 
     <script src="config.js?v=1.3"></script>
     <script src="characters.js?v=1.3"></script>
@@ -54,4 +59,5 @@
     <script src="js/gacha_view.js?v=1.4"></script>
     <script src="js/main.js?v=1.4"></script>
 </body>
+
 </html>

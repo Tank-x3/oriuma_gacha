@@ -2,8 +2,10 @@
    基本設定・リセット
    ========================================= */
 body {
-    background-color: #222; /* 背景：濃いグレー */
-    color: #eee;            /* 文字色：白系 */
+    background-color: #222;
+    /* 背景：濃いグレー */
+    color: #eee;
+    /* 文字色：白系 */
     font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
     margin: 0;
     padding: 20px;
@@ -14,11 +16,12 @@ body {
 
 .main-container {
     width: 100%;
-    max-width: 600px; /* スマホで見やすい幅に制限 */
+    max-width: 800px;
+    /* v0.07: ワイド画面対応のため拡張 */
     background-color: #333;
     padding: 20px;
     border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
     display: flex;
     flex-direction: column;
 }
@@ -31,7 +34,8 @@ header h1 {
     font-size: 24px;
     margin-bottom: 20px;
     color: #fff;
-    border-bottom: 2px solid #4CAF50; /* ウマ娘イメージの緑 */
+    border-bottom: 2px solid #4CAF50;
+    /* ウマ娘イメージの緑 */
     padding-bottom: 10px;
 }
 
@@ -70,38 +74,188 @@ header h1 {
     flex-grow: 1;
 }
 
-#result-list li {
-    padding: 10px 5px; /* 上下余白を少し追加 */
+/* 
+   v0.07: CSS Grid & Responsive Layout
+   ========================================= 
+*/
+.result-row {
+    padding: 10px 5px;
     border-bottom: 1px dashed #333;
     font-size: 16px;
-    
-    /* レイアウト変更: 折り返しを許可してセリフを次行へ */
     display: flex;
-    flex-wrap: wrap; 
-    align-items: center;
-    min-height: 24px;
+    flex-direction: column;
+    /* デフォルトは縦積み */
+    gap: 2px;
 }
 
-/* カーソル（▶） */
+/* アイテムごとの個別スタイル */
 .cursor-marker {
     display: inline-block;
     width: 20px;
     color: #4CAF50;
     font-weight: bold;
     margin-right: 5px;
-    flex-shrink: 0; /* 幅固定 */
+    flex-shrink: 0;
 }
 
-/* 点滅アニメーション */
 .blinking {
     animation: blink 1s infinite;
 }
 
 @keyframes blink {
-    0% { opacity: 1; }
-    50% { opacity: 0; }
-    100% { opacity: 1; }
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
 }
+
+.star-text {
+    font-weight: bold;
+    margin-right: 5px;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+    display: inline-block;
+    /* v0.07 Fix: モバイル(Flex)表示時のbackground-clip対策 */
+    align-self: flex-start;
+    /* v0.07 Fix: モバイル(Column)でStretchされてグラデーションが間延びするのを防ぐ */
+}
+
+/* タイトルと名前は折り返し禁止 */
+.char-title,
+.char-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.char-title {
+    color: #aaa;
+    font-size: 0.9em;
+}
+
+/* モバイル向け階段状レイアウト */
+/* 縦積み時のみインデントを適用 */
+@media (max-width: 599px) {
+    .char-title {
+        padding-left: 1.5em;
+        /* インデント */
+    }
+
+    .char-name {
+        padding-left: 3.5em;
+        /* さらにインデント (v0.07 Adjusted) */
+    }
+}
+
+/* PC / Wide Screen Layout (600px以上) */
+@media (min-width: 600px) {
+    .result-row {
+        /* 
+           行構成:
+           Row 1: Marker + Star + Title + Name
+           Row 2: Quote (if exists)
+        */
+        display: block;
+        /* Flex解除して通常のブロックフローへ（内部で並べる） */
+    }
+
+    /* 1行目に並べる要素をインラインまたはフレックスでラップすると良いが、
+       HTML構造がフラットなので、floatやinline-blockで対応するか、
+       あるいは .result-row 自体を flex-wrap: wrap にして調整する。
+       
+       ここでは flex-wrap: wrap を採用する。
+    */
+    .result-row {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: baseline;
+    }
+
+    .cursor-marker {
+        order: 1;
+    }
+
+    .star-text {
+        order: 2;
+        margin-right: 10px;
+        align-self: auto;
+        /* v0.07 PCではBaselineに戻す */
+    }
+
+    .char-title {
+        order: 3;
+        margin-right: 5px;
+    }
+
+    .char-name {
+        order: 4;
+        margin-right: auto;
+        /* 右余白を埋める */
+    }
+
+    .char-quote {
+        order: 5;
+        width: 100%;
+        /* 強制改行 */
+        padding-left: 60px;
+        /* インデント調整 (Marker+Star分) */
+        margin-top: 4px;
+    }
+
+    /* PCではインデント解除 */
+    .char-title,
+    .char-name {
+        padding-left: 0;
+    }
+}
+
+/* 
+   v0.07 Fix: 画像生成用の強制PCレイアウトクラス
+   (.force-desktop が付与されたコンテナ内では無条件でPCレイアウトを適用)
+*/
+.force-desktop .result-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+}
+
+.force-desktop .cursor-marker {
+    order: 1;
+}
+
+.force-desktop .star-text {
+    order: 2;
+    margin-right: 10px;
+}
+
+.force-desktop .char-title {
+    order: 3;
+    margin-right: 5px;
+    padding-left: 0;
+}
+
+.force-desktop .char-name {
+    order: 4;
+    margin-right: auto;
+    padding-left: 0;
+}
+
+.force-desktop .char-quote {
+    order: 5;
+    width: 100%;
+    padding-left: 60px;
+    margin-top: 4px;
+}
+
 
 /* プレースホルダーテキスト */
 .placeholder-text {
@@ -114,51 +268,51 @@ header h1 {
 /* =========================================
    レアリティ別装飾
    ========================================= */
-.star-text {
-    font-weight: bold;
-    margin-right: 10px;
-    letter-spacing: 2px;
-    flex-shrink: 0; /* 星が潰れないように */
-}
-
 /* ★1: 銀色/白 */
 .rarity-1 {
     color: #ccc;
 }
+
 /* ★2: 金色 */
 .rarity-2 {
     color: #FFD700;
 }
+
 /* ★3: 虹色 */
 .rarity-3 {
     background: linear-gradient(to right, #ff5e62, #ff9966, #ffff00, #39ff14, #00ffff, #0000ff, #ff00ff);
     -webkit-background-clip: text;
+    background-clip: text;
+    /* 標準プロパティ追加 */
     color: transparent;
     font-weight: 900;
+    display: inline-block;
+    /* Flexアイテム下での描画安定化 */
 }
+
 /* ★4: シークレット（激レア） */
 .rarity-4 {
     background: linear-gradient(to right, #ff00cc, #333399, #ff00cc);
     background-size: 200% auto;
     -webkit-background-clip: text;
+    background-clip: text;
+    /* 標準プロパティ追加 */
     color: transparent;
     font-weight: 900;
     font-size: 1.2em;
     text-shadow: 0 0 10px rgba(255, 0, 204, 0.5);
     animation: shine 2s linear infinite;
+    display: inline-block;
+    /* Flexアイテム下での描画安定化 */
 }
 
 @keyframes shine {
-    to { background-position: 200% center; }
+    to {
+        background-position: 200% center;
+    }
 }
 
-/* キャラクター名 */
-.char-name {
-    font-weight: normal;
-    white-space: nowrap; /* 名前での折り返しを防止 */
-    margin-right: auto; /* 右側余白を埋める */
-}
-/* ★3, ★4 キャラ名は強調 */
+/* キャラクター名強調 */
 .char-name.rarity-3,
 .char-name.rarity-4 {
     font-weight: bold;
@@ -168,17 +322,14 @@ header h1 {
 
 /* 獲得時セリフ（★3, ★4のみ） */
 .char-quote {
-    /* 強制的に次の行へ */
-    width: 100%; 
-    flex-basis: 100%;
-    
-    font-size: 12px;
-    color: #aaa;
-    margin-top: 5px; /* 名前との間隔 */
-    padding-left: 35px; /* マーカー+星の分インデント */
+    font-size: 13px;
+    color: #bbb;
     font-style: italic;
     line-height: 1.4;
+    white-space: normal;
+    /* 折り返し許可 */
 }
+
 
 /* =========================================
    操作エリア
@@ -209,6 +360,7 @@ header h1 {
     background-color: #4CAF50;
     font-weight: bold;
 }
+
 .gacha-btn.primary:hover {
     background-color: #45a049;
 }
@@ -229,6 +381,7 @@ header h1 {
     background-color: #2196F3;
     color: white;
 }
+
 .action-btn:hover {
     background-color: #0b7dda;
 }
@@ -238,33 +391,29 @@ header h1 {
 }
 
 /* =========================================
-   インフォメーションバナー (v0.04)
+   インフォメーションバナー
    ========================================= */
 .info-banner {
-    background-color: #2c3e50; /* 落ち着いた紺色 */
+    background-color: #2c3e50;
     color: #fff;
     border: 1px solid #4CAF50;
-    border-left: 5px solid #4CAF50; /* 左端を太くして強調 */
+    border-left: 5px solid #4CAF50;
     padding: 10px 15px;
     margin-bottom: 20px;
     border-radius: 4px;
     font-size: 14px;
     line-height: 1.5;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
-/* リンクがある場合のスタイル */
 .info-banner a {
     color: #81C784;
     text-decoration: underline;
 }
 
 /* =========================================
-   v0.05 追加スタイル
-   (提供割合表示 & 履歴モダル)
+   提供割合 & 履歴
    ========================================= */
-
-/* 提供割合・実装数エリア */
 .stats-container {
     background-color: #222;
     border: 1px solid #444;
@@ -275,22 +424,33 @@ header h1 {
     color: #aaa;
     line-height: 1.6;
 }
+
 .stats-row {
     display: flex;
     justify-content: space-between;
     border-bottom: 1px dashed #333;
 }
+
 .stats-row:last-child {
     border-bottom: none;
 }
-.stats-label { font-weight: bold; }
-.stats-value { color: #ddd; }
 
-/* フッターエリア（履歴ボタンなど） */
+.stats-label {
+    font-weight: bold;
+}
+
+.stats-value {
+    color: #ddd;
+}
+
 .footer-area {
     margin-top: 15px;
     text-align: center;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
 }
+
 .text-link-btn {
     background: none;
     border: none;
@@ -299,9 +459,12 @@ header h1 {
     cursor: pointer;
     font-size: 14px;
 }
-.text-link-btn:hover { color: #fff; }
 
-/* モダル（ポップアップ） */
+.text-link-btn:hover {
+    color: #fff;
+}
+
+/* モダル */
 .modal {
     position: fixed;
     z-index: 100;
@@ -309,7 +472,7 @@ header h1 {
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0,0,0,0.8); /* 背景暗転 */
+    background-color: rgba(0, 0, 0, 0.8);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -323,7 +486,7 @@ header h1 {
     max-width: 500px;
     max-height: 80vh;
     padding: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
     position: relative;
     display: flex;
     flex-direction: column;
@@ -338,7 +501,10 @@ header h1 {
     font-weight: bold;
     cursor: pointer;
 }
-.close-btn:hover { color: #fff; }
+
+.close-btn:hover {
+    color: #fff;
+}
 
 .history-list-container {
     flex-grow: 1;
@@ -357,8 +523,17 @@ header h1 {
     display: flex;
     align-items: baseline;
 }
-.history-date { color: #666; font-size: 11px; margin-right: 8px; width: 80px; }
-.history-name { flex-grow: 1; }
+
+.history-date {
+    color: #666;
+    font-size: 11px;
+    margin-right: 8px;
+    width: 80px;
+}
+
+.history-name {
+    flex-grow: 1;
+}
 
 .clear-history-btn {
     background-color: #555;
@@ -369,4 +544,8 @@ header h1 {
     font-size: 12px;
     align-self: flex-end;
 }
-.clear-history-btn:hover { background-color: #d32f2f; color: #fff; }
+
+.clear-history-btn:hover {
+    background-color: #d32f2f;
+    color: #fff;
+}

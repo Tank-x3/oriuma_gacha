@@ -60,8 +60,12 @@ async function pullGacha(count) {
     // 終了処理
     window.gachaView.finishGacha();
 
-    // 統計情報の更新（実装数などは変わらないが念のため）
-    // window.gachaView.renderStats(window.gachaLogic.getStats()); 
+    // 完了後の追加UI操作（シェアボタンの表示など）があれば記述
+    // 今回はHTML側に静的にはないので、必要なら追加する
+    if (count === 10) {
+        // 画像保存ボタンを表示するなどの制御をここに書いてもよい
+        showShareButton();
+    }
 }
 
 function skipAnimation() {
@@ -75,6 +79,7 @@ function skipAnimation() {
 
 function resetGacha() {
     window.gachaView.resetUI();
+    hideShareButton();
 }
 
 // 履歴関連
@@ -94,6 +99,11 @@ function clearHistory() {
     }
 }
 
+// v0.07 画像生成
+function generateImage() {
+    window.gachaView.generateImage();
+}
+
 // グローバルに公開
 window.pullGacha = pullGacha;
 window.skipAnimation = skipAnimation;
@@ -101,6 +111,45 @@ window.resetGacha = resetGacha;
 window.openHistory = openHistory;
 window.closeHistory = closeHistory;
 window.clearHistory = clearHistory;
+window.generateImage = generateImage;
+
+// シェアボタン制御（簡易実装）
+function showShareButton() {
+    // 既存ボタンエリアに追加、または専用エリアを表示
+    // 今回は既存の .control-area に動的に追加するか、
+    // あるいは最初からHTMLにあってhiddenにしておくのがスマート。
+    // 指示書には「HTML変更」として「DOM-to-Image追加」はあるが、
+    // ボタン自体の追加指示が漏れている可能性がある。
+    // ただし index.html を見ると share ボタンはない。
+    // よって、ここで動的に追加するか、既存のエリアを活用する。
+
+    // resetボタンの横にシェアボタンを追加するロジック
+    // （既存の resetGacha で消す必要がある）
+
+    let btn = document.getElementById('btn-share');
+    if (!btn) {
+        const resetBtn = document.getElementById('btn-reset');
+        if (resetBtn && resetBtn.parentNode) {
+            btn = document.createElement('button');
+            btn.id = 'btn-share';
+            btn.className = 'action-btn';
+            btn.textContent = '📸 画像で保存';
+            btn.onclick = generateImage;
+            btn.style.marginLeft = '10px';
+            btn.style.backgroundColor = '#9C27B0'; // 紫
+            resetBtn.parentNode.appendChild(btn);
+        }
+    }
+    if (btn) btn.classList.remove('hidden');
+}
+
+function hideShareButton() {
+    const btn = document.getElementById('btn-share');
+    if (btn) {
+        btn.classList.add('hidden');
+    }
+}
+
 
 // =========================================
 // 演出進行ロジック
@@ -175,10 +224,8 @@ function waitForClick() {
 
 // 画面全体のクリックイベント（クリックで次へ）
 document.addEventListener('click', (e) => {
-    // ボタンのクリックは除外しないと、ボタンイベントと競合する可能性があるが
-    // 元の実装では document.click で resolve しているためそれに従う。
-    // ただし、ボタン自体がクリックされたときもここが発火する。
-    // clickResolverがあれば解決するだけなので副作用は少ないはず。
+    // ボタンのクリックは除外しないと、ボタンイベントと競合する可能性がある
+    // ただし、ボタンonClickのあとにここに来る分には、clickResolverがあれば進むだけなので問題ない
 
     if (clickResolver) {
         const resolve = clickResolver;
