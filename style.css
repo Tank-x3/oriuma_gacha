@@ -152,6 +152,14 @@ header h1 {
         padding-left: 3.5em;
         /* さらにインデント (v0.07 Adjusted) */
     }
+
+    /* v0.07 Fix: Quote alignment (Center block, Left text) */
+    .char-quote {
+        align-self: center;
+        width: fit-content;
+        max-width: 100%;
+        text-align: left;
+    }
 }
 
 /* PC / Wide Screen Layout (600px以上) */

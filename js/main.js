@@ -7,6 +7,12 @@ document.addEventListener('DOMContentLoaded', () => {
     window.gachaLogic = new GachaLogic();
     window.gachaView = new GachaView();
 
+    // イベントリスナー設定
+    // イベントリスナー設定 (setupEventListenersは未定義のため削除) 
+    // setupEventListeners();
+
+
+
     // 初期化処理
     initialize();
 });
