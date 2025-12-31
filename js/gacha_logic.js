@@ -5,11 +5,37 @@
 
 /**
  * ガチャの抽選ロジックとデータ管理を行うクラス
- * v0.07: Guaranteed Logic Update
+ * v0.08: Pickup & Dynamic Rates Update
  */
 class GachaLogic {
     constructor() {
         this.HISTORY_KEY = 'oriuma_gacha_history_v1';
+
+        // 初期化処理: R1確率の自動計算
+        this._initRates();
+
+        // ピックアップ情報のキャッシュ
+        this.pickupTotalRate = (PICKUP_CHAR_IDS.length * PICKUP_RATE_PER_CHAR);
+    }
+
+    _initRates() {
+        // RATES.R1 を計算 (100 - 他の合計 - ピックアップ合計)
+        // ※RATESはconfig.jsの定数だが、オブジェクトプロパティは変更可能
+
+        let otherTotal = 0;
+        if (RATES.GOD) otherTotal += RATES.GOD;
+        if (RATES.R4) otherTotal += RATES.R4;
+        otherTotal += RATES.R3;
+        otherTotal += RATES.R2;
+
+        const pickupTotal = (PICKUP_CHAR_IDS.length * PICKUP_RATE_PER_CHAR);
+
+        RATES.R1 = 100 - (otherTotal + pickupTotal);
+
+        // 念のため浮動小数点誤差を丸める (少数第3位まで)
+        RATES.R1 = Math.round(RATES.R1 * 1000) / 1000;
+
+        console.log("Calculated R1 Rate:", RATES.R1, "%");
     }
 
     /**
@@ -19,28 +45,60 @@ class GachaLogic {
      */
     draw(count) {
         const results = [];
+        const pickupTotal = this.pickupTotalRate;
+
         for (let i = 0; i < count; i++) {
             let currentRates = RATES;
             let isGuaranteed = false;
+            let isPickup = false;
+            let character = null;
+            let realRarity = 0;
 
             // 10連の10枠目（インデックス9）は確定枠
+            // ※確定枠にはピックアップ判定を含めるか？
+            //  -> 通常の「R2以上確定」の場合、Pickup(R3相当)は条件を満たす。
+            //  -> ここでは、確定枠でもまずPickup抽選を行い、外れたらGuaranteeテーブルを使う実装とする。
+
             if (count === 10 && i === 9) {
                 currentRates = GUARANTEED_RATES;
                 isGuaranteed = true;
             }
 
-            const rarity = this._pickRarity(currentRates);
-            const character = this._pickCharacter(rarity);
+            // 抽選実行 (Single Random Number Logic)
+            const rand = Math.random() * 100;
+
+            // 1. ピックアップ判定 (確定枠でも有効とする)
+            if (rand < pickupTotal) {
+                isPickup = true;
+                realRarity = 3; // Pickupは基本R3扱い (データ依存だが一旦R3とする)
+                character = this._pickPickupCharacter();
+                // キャラクターデータから本当のレアリティを取得 (念のため)
+                // IDから検索が必要だが、_pickPickupCharacterが返すオブジェクトに含まれるか？
+                // characters.jsのID体系から逆引きするのはコストが高いので、
+                // _pickPickupCharacter 内で解決済みとする。
+                // 簡易的に pickup IDリストは R3 前提とする。
+            } else {
+                // 2. 通常/確定枠 判定
+                // ピックアップ判定に使った rand をそのまま使い、オフセットさせる
+                // threshold start = pickupTotal
+                realRarity = this._pickRarityWithOffset(currentRates, pickupTotal, rand);
+                character = this._pickCharacter(realRarity);
+            }
 
             // 確定枠かどうかを渡す
-            const promotion = this._checkPromotion(rarity, isGuaranteed);
+            const promotion = this._checkPromotion(realRarity, isGuaranteed);
+
+            // スキップ中断判定: ★3以上 または 昇格演出あり
+            const shouldStopSkip = (realRarity >= 3) || promotion.isPromotion;
 
             results.push({
-                realRarity: rarity,
+                realRarity: realRarity,
                 displayRarity: promotion.initialRarity,
                 character: character,
                 isPromotion: promotion.isPromotion,
-                promotionType: promotion.type
+                promotionType: promotion.type,
+                shouldStopSkip: shouldStopSkip,
+                isPickup: isPickup
             });
         }
 
@@ -57,7 +115,11 @@ class GachaLogic {
      * @returns {Array} 統計データの配列
      */
     getStats() {
+        // ピックアップ対象のリスト作成
+        const pickupList = this._getPickupCharacters();
+
         return [
+            { label: "PICKUP (★3)", rate: this.pickupTotalRate, list: pickupList },
             { label: "★3 (SSR)", rate: RATES.R3, list: CHARACTERS_R3 },
             { label: "★2 (SR)", rate: RATES.R2, list: CHARACTERS_R2 },
             { label: "★1 (R)", rate: RATES.R1, list: CHARACTERS_R1 }
@@ -83,9 +145,8 @@ class GachaLogic {
     // Private Methods (Internal Logic)
     // =========================================
 
-    _pickRarity(rates) {
-        const rand = Math.random() * 100;
-        let threshold = 0;
+    _pickRarityWithOffset(rates, offset, rand) {
+        let threshold = offset;
 
         if (rates.GOD) {
             threshold += rates.GOD;
@@ -99,7 +160,37 @@ class GachaLogic {
         if (rand < threshold) return 3;
         threshold += rates.R2;
         if (rand < threshold) return 2;
+
+        // 残りはR1 (RATES.R1 or Guaranteed default)
         return 1;
+    }
+
+    _pickPickupCharacter() {
+        if (!PICKUP_CHAR_IDS || PICKUP_CHAR_IDS.length === 0) {
+            // Fallback (should not happen if rate > 0)
+            return this._pickCharacter(3);
+        }
+        const index = Math.floor(Math.random() * PICKUP_CHAR_IDS.length);
+        const id = PICKUP_CHAR_IDS[index];
+        return this._findCharacterById(id);
+    }
+
+    _findCharacterById(id) {
+        // IDから全探索 (R4, R3, R2, R1の順)
+        let char = CHARACTERS_R4.find(c => c.id === id);
+        if (char) return char;
+        char = CHARACTERS_R3.find(c => c.id === id);
+        if (char) return char;
+        char = CHARACTERS_R2.find(c => c.id === id);
+        if (char) return char;
+        char = CHARACTERS_R1.find(c => c.id === id);
+        if (char) return char;
+
+        return { id: id, name: "Unknown", quote: "" };
+    }
+
+    _getPickupCharacters() {
+        return PICKUP_CHAR_IDS.map(id => this._findCharacterById(id));
     }
 
     _pickCharacter(rarity) {
@@ -111,6 +202,7 @@ class GachaLogic {
         else list = CHARACTERS_R1;
 
         if (!list || list.length === 0) {
+            // データがない場合のフォールバック
             return { id: "000", name: "データなし", quote: "" };
         }
         const index = Math.floor(Math.random() * list.length);
@@ -128,11 +220,7 @@ class GachaLogic {
         // ★4: 常に昇格演出
         if (realRarity === 4) {
             if (isGuaranteed) {
-                // 確定枠の場合、★1からの昇格はありえない（最低★2）ので、
-                // ★2始動か★3始動のみ許可する。
-                // 既存ロジックは "R4_START_FROM_R3" (40%) と Else (60%) なので
-                // Elseの場合は R2 -> R4 となる。これは整合する。
-                // よって変更不要。
+                // 確定枠の場合、★1からの昇格はありえない（最低★2）
             }
 
             if (rand <= PROMOTION_CHATES.R4_START_FROM_R3) {
@@ -145,10 +233,7 @@ class GachaLogic {
         // ★3 (SSR)
         if (realRarity === 3) {
             if (rand <= PROMOTION_CHATES.HIDE_R3_STRONG) {
-                // Pattern C: ★1 -> ★2 -> ★3 (2段階昇格)
-                // 確定枠(isGuaranteed)の場合は★1表示が許されないため、このパターンは禁止。
-                // 代わりに Pattern B (★2 -> ★3) にフォールバックするか、昇格なしにする。
-                // ここでは Pattern B にフォールバックする。
+                // Pattern C: ★1 -> ★2 -> ★3
                 if (isGuaranteed) {
                     return { isPromotion: true, initialRarity: 2, type: 'B' };
                 }
@@ -156,17 +241,14 @@ class GachaLogic {
             }
             if (rand <= PROMOTION_CHATES.HIDE_R3_STRONG + PROMOTION_CHATES.HIDE_R3_WEAK) {
                 // Pattern B: ★2 -> ★3
-                // これは確定枠でもOK。
                 return { isPromotion: true, initialRarity: 2, type: 'B' };
             }
         }
 
         // ★2 (SR)
         if (realRarity === 2) {
-            // Pattern A: ★1 -> ★2
             if (rand <= PROMOTION_CHATES.HIDE_R2) {
-                // 確定枠の場合、★1表示は許されないため禁止。
-                // 昇格なし（最初から★2表示）とする。
+                // Pattern A: ★1 -> ★2
                 if (isGuaranteed) {
                     return { isPromotion: false, initialRarity: 2, type: null };
                 }
@@ -218,7 +300,8 @@ class GachaLogic {
                 date: timeStr,
                 name: res.character.name,
                 rarity: res.realRarity,
-                isPromotion: res.isPromotion
+                isPromotion: res.isPromotion,
+                isPickup: res.isPickup
             });
         });
 
@@ -229,3 +312,4 @@ class GachaLogic {
         localStorage.setItem(this.HISTORY_KEY, JSON.stringify(history));
     }
 }
+

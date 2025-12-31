@@ -28,11 +28,28 @@
         </div>
 
         <div class="control-area">
-            <button id="btn-single" class="gacha-btn" onclick="pullGacha(1)">単発で引く</button>
-            <button id="btn-multi" class="gacha-btn primary" onclick="pullGacha(10)">10連で引く</button>
+            <!-- Group 1: Initial (Start) -->
+            <div id="ctrl-init" class="control-group">
+                <button id="btn-single" class="gacha-btn" onclick="pullGacha(1)">単発で引く</button>
+                <button id="btn-multi" class="gacha-btn primary" onclick="pullGacha(10)">10連で引く</button>
+            </div>
 
-            <button id="btn-skip" class="action-btn hidden" onclick="skipAnimation()">SKIP ▶▶</button>
-            <button id="btn-reset" class="action-btn hidden" onclick="resetGacha()">もう一度引く</button>
+            <!-- Group 2: Active (Skip) -->
+            <div id="ctrl-active" class="control-group hidden">
+                <button id="btn-skip" class="action-btn full-width" onclick="skipAnimation()">SKIP ▶▶</button>
+                <div class="skip-option-row" onclick="event.stopPropagation()">
+                    <label>
+                        <input type="checkbox" id="chk-skip-all"> 止まらずスキップ
+                    </label>
+                </div>
+            </div>
+
+            <!-- Group 3: Result (Retry/Back/Share) -->
+            <div id="ctrl-result" class="control-group hidden">
+                <button id="btn-retry" class="gacha-btn primary" onclick="retryGacha()">もう一度引く</button>
+                <button id="btn-title" class="action-btn" onclick="backToTitle()">回数選択へ</button>
+                <button id="btn-share" class="action-btn share-btn" onclick="generateImage()">📸 画像で保存</button>
+            </div>
         </div>
 
         <div class="footer-area">

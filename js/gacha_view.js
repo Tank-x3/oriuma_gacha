@@ -15,10 +15,15 @@ class GachaView {
         this.elHistoryModal = document.getElementById('history-modal');
         this.elHistoryList = document.getElementById('history-list');
 
-        this.elBtnSingle = document.getElementById('btn-single');
-        this.elBtnMulti = document.getElementById('btn-multi');
-        this.elBtnSkip = document.getElementById('btn-skip');
-        this.elBtnReset = document.getElementById('btn-reset');
+        // Button Groups
+        this.elCtrlInit = document.getElementById('ctrl-init');
+        this.elCtrlActive = document.getElementById('ctrl-active');
+        this.elCtrlResult = document.getElementById('ctrl-result');
+
+        // Specific Buttons
+        this.elBtnRetry = document.getElementById('btn-retry');
+
+        // Note: other buttons are handled by onclick in HTML or main.js logic
     }
 
     /**
@@ -35,7 +40,7 @@ class GachaView {
     }
 
     /**
-     * 提供割合情報を表示
+     * 提供割合情報をを表示
      * @param {Array} stats 
      */
     renderStats(stats) {
@@ -62,10 +67,11 @@ class GachaView {
     resetForDraw() {
         this.elResultList.innerHTML = '';
         this.elGateText.classList.add('hidden');
-        this.elBtnSingle.classList.add('hidden');
-        this.elBtnMulti.classList.add('hidden');
-        this.elBtnSkip.classList.remove('hidden');
-        this.elBtnReset.classList.add('hidden');
+
+        // Hide Init & Result, Show Active (Skip)
+        if (this.elCtrlInit) this.elCtrlInit.classList.add('hidden');
+        if (this.elCtrlResult) this.elCtrlResult.classList.add('hidden');
+        if (this.elCtrlActive) this.elCtrlActive.classList.remove('hidden');
     }
 
     /**
@@ -132,17 +138,17 @@ class GachaView {
     /**
      * 結果を1行確定表示する
      * v0.07: 名前パース処理を追加
+     * v0.08: 2段階表示対応 (showName: false = セリフのみ, true = 名前も表示)
      * @param {number} index 
      * @param {Object} res 
+     * @param {boolean} showName 
      */
-    updateRow(index, res) {
+    updateRow(index, res, showName = true) {
         const elTitle = document.getElementById(`title-${index}`);
         const elName = document.getElementById(`name-${index}`);
         const elQuote = document.getElementById(`quote-${index}`);
 
         // 名前のパース
-        // 例: "[トレセン学園理事長]秋川理事長" -> Title: "[トレセン学園理事長]", Name: "秋川理事長"
-        // 例: "［ポンタ王国王女］ポンタ" -> Title: "［ポンタ王国王女］", Name: "ポンタ"
         const fullName = res.character.name;
         // 正規表現: 先頭にある [] または ［］ で囲まれた部分を抽出
         const match = fullName.match(/^([\[［].+?[\]］])(.*)$/);
@@ -155,15 +161,21 @@ class GachaView {
             nameText = match[2]; // 残りの部分
         }
 
-        elTitle.textContent = titleText;
-        elName.textContent = nameText;
+        // v0.08: showNameがfalseの場合、名前と肩書きは更新しない（または隠す）
+        // ただし初期状態が「？？？」なので、そのままにしておけばよい。
+        if (showName) {
+            elTitle.textContent = titleText;
+            elName.textContent = nameText;
 
-        // ★3以上なら強調 & セリフ表示
+            // ★3以上なら強調
+            if (res.realRarity >= 3) {
+                elName.classList.add(`rarity-${res.realRarity}`);
+            }
+        }
+
+        // セリフ表示 (showNameに関わらず表示、またはPhase1で表示)
+        // Phase1(showName=false)の時点でセリフを表示したい。
         if (res.realRarity >= 3) {
-            elName.classList.add(`rarity-${res.realRarity}`);
-            // Titleにもレアリティ色を適用するかは要件にないが、統一感のため適用してもよい
-            // 現状はNameのみ適用
-
             if (res.character.quote && res.character.quote !== "") {
                 elQuote.textContent = res.character.quote;
             }
@@ -210,22 +222,34 @@ class GachaView {
             m.style.visibility = 'hidden';
             m.classList.remove('blinking');
         });
-        this.elBtnSkip.classList.add('hidden');
-        this.elBtnReset.classList.remove('hidden');
-        this.elBtnSingle.classList.remove('hidden');
-        this.elBtnMulti.classList.remove('hidden');
+
+        // Hide Active, Show Result
+        if (this.elCtrlActive) this.elCtrlActive.classList.add('hidden');
+        if (this.elCtrlResult) this.elCtrlResult.classList.remove('hidden');
     }
 
     /**
-     * リセット時のUI状態
+     * リセット時のUI状態 (タイトルへ戻る)
      */
     resetUI() {
         this.elResultList.innerHTML = '<li class="placeholder-text">「ガチャを引く」ボタンを押してください</li>';
         this.elGateText.classList.add('hidden');
         this.elGateText.textContent = '';
-        this.elBtnReset.classList.add('hidden');
-        this.elBtnSingle.classList.remove('hidden');
-        this.elBtnMulti.classList.remove('hidden');
+
+        // Show Init, Hide others
+        if (this.elCtrlInit) this.elCtrlInit.classList.remove('hidden');
+        if (this.elCtrlActive) this.elCtrlActive.classList.add('hidden');
+        if (this.elCtrlResult) this.elCtrlResult.classList.add('hidden');
+    }
+
+    /**
+     * リトライボタンのテキストを更新
+     * @param {number} count 
+     */
+    updateRetryButton(count) {
+        if (this.elBtnRetry) {
+            this.elBtnRetry.textContent = count === 10 ? "もう一度引く (10連)" : "もう一度引く (単発)";
+        }
     }
 
     /**

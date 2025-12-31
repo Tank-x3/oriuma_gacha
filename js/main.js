@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // コントローラーの状態
 let isSkipping = false;
 let clickResolver = null;
+let lastDrawCount = 1; // v0.08.1: リトライ用に記憶
 
 function initialize() {
     // インフォメーション表示
@@ -47,9 +48,15 @@ function initialize() {
 async function pullGacha(count) {
     if (!window.gachaLogic || !window.gachaView) return;
 
+    // v0.08.1: 回数記憶
+    lastDrawCount = count;
+
     // UIリセット
     window.gachaView.resetForDraw();
     isSkipping = false;
+
+    // リトライボタンのテキスト更新
+    window.gachaView.updateRetryButton(count);
 
     // 抽選実行
     const { results, gateText } = window.gachaLogic.draw(count);
@@ -66,12 +73,15 @@ async function pullGacha(count) {
     // 終了処理
     window.gachaView.finishGacha();
 
-    // 完了後の追加UI操作（シェアボタンの表示など）があれば記述
-    // 今回はHTML側に静的にはないので、必要なら追加する
-    if (count === 10) {
-        // 画像保存ボタンを表示するなどの制御をここに書いてもよい
-        showShareButton();
-    }
+    // v0.08.1: シェアボタン制御は不要（静的配置のため）
+}
+
+function retryGacha() {
+    pullGacha(lastDrawCount);
+}
+
+function backToTitle() {
+    resetGacha();
 }
 
 function skipAnimation() {
@@ -85,7 +95,7 @@ function skipAnimation() {
 
 function resetGacha() {
     window.gachaView.resetUI();
-    hideShareButton();
+    // hideShareButton(); // v0.08.1: 不要
 }
 
 // 履歴関連
@@ -112,6 +122,8 @@ function generateImage() {
 
 // グローバルに公開
 window.pullGacha = pullGacha;
+window.retryGacha = retryGacha; // New
+window.backToTitle = backToTitle; // New
 window.skipAnimation = skipAnimation;
 window.resetGacha = resetGacha;
 window.openHistory = openHistory;
@@ -119,42 +131,8 @@ window.closeHistory = closeHistory;
 window.clearHistory = clearHistory;
 window.generateImage = generateImage;
 
-// シェアボタン制御（簡易実装）
-function showShareButton() {
-    // 既存ボタンエリアに追加、または専用エリアを表示
-    // 今回は既存の .control-area に動的に追加するか、
-    // あるいは最初からHTMLにあってhiddenにしておくのがスマート。
-    // 指示書には「HTML変更」として「DOM-to-Image追加」はあるが、
-    // ボタン自体の追加指示が漏れている可能性がある。
-    // ただし index.html を見ると share ボタンはない。
-    // よって、ここで動的に追加するか、既存のエリアを活用する。
+// シェアボタン制御関数は廃止
 
-    // resetボタンの横にシェアボタンを追加するロジック
-    // （既存の resetGacha で消す必要がある）
-
-    let btn = document.getElementById('btn-share');
-    if (!btn) {
-        const resetBtn = document.getElementById('btn-reset');
-        if (resetBtn && resetBtn.parentNode) {
-            btn = document.createElement('button');
-            btn.id = 'btn-share';
-            btn.className = 'action-btn';
-            btn.textContent = '📸 画像で保存';
-            btn.onclick = generateImage;
-            btn.style.marginLeft = '10px';
-            btn.style.backgroundColor = '#9C27B0'; // 紫
-            resetBtn.parentNode.appendChild(btn);
-        }
-    }
-    if (btn) btn.classList.remove('hidden');
-}
-
-function hideShareButton() {
-    const btn = document.getElementById('btn-share');
-    if (btn) {
-        btn.classList.add('hidden');
-    }
-}
 
 
 // =========================================
@@ -163,7 +141,9 @@ function hideShareButton() {
 
 async function runPresentation(results) {
     // ゲートテキストを少し見せる時間
-    await sleep(isSkipping ? 0 : 800);
+    // v0.08: GATE_OPEN設定値を使用
+    const waitTime = (typeof ANIMATION_WAIT !== 'undefined') ? ANIMATION_WAIT.GATE_OPEN : 800;
+    await sleep(isSkipping ? 0 : waitTime);
 
     for (let i = 0; i < results.length; i++) {
         const res = results[i];
@@ -183,6 +163,19 @@ async function runPresentation(results) {
 }
 
 async function revealRowSequence(res, rowId) {
+    // v0.08: スキップ中断ロジック
+    // スキップ中 かつ 中断フラグあり かつ 全スキップ設定OFF の場合
+    const chkSkipAll = document.getElementById('chk-skip-all');
+    const isSkipAll = chkSkipAll ? chkSkipAll.checked : false;
+
+    if (isSkipping && res.shouldStopSkip && !isSkipAll) {
+        isSkipping = false;
+        // ここでfalseにすると、以降のsleepは通常ウェイトになる
+    }
+
+    // ウェイト設定
+    const waits = (typeof ANIMATION_WAIT !== 'undefined') ? ANIMATION_WAIT : { PROMOTION_STEP: 600, QUOTE_DISPLAY: 1500 };
+
     // 昇格演出
     if (res.isPromotion) {
         if (res.promotionType === 'TO_4_FROM_3') {
@@ -192,13 +185,13 @@ async function revealRowSequence(res, rowId) {
         else if (res.promotionType === 'TO_4_FROM_2') {
             await sleep(isSkipping ? 0 : 300);
             window.gachaView.updateStar(rowId, 3);
-            await sleep(isSkipping ? 0 : 600);
+            await sleep(isSkipping ? 0 : waits.PROMOTION_STEP);
             window.gachaView.updateStar(rowId, 4);
         }
         else if (res.promotionType === 'C') { // 3 from 1
             await sleep(isSkipping ? 0 : 300);
             window.gachaView.updateStar(rowId, 2);
-            await sleep(isSkipping ? 0 : 600);
+            await sleep(isSkipping ? 0 : waits.PROMOTION_STEP);
             window.gachaView.updateStar(rowId, 3);
         }
         else if (res.promotionType === 'B') { // 3 from 2
@@ -211,9 +204,22 @@ async function revealRowSequence(res, rowId) {
         }
     }
 
-    // 名前とセリフの表示
-    await sleep(isSkipping ? 0 : 200);
-    window.gachaView.updateRow(rowId, res);
+    // 名前とセリフの表示 (v0.08: 2段階表示)
+    if (res.realRarity >= 3) {
+        // Phase 1: セリフのみ (名前は？？？)
+        await sleep(isSkipping ? 0 : 200);
+        window.gachaView.updateRow(rowId, res, false);
+
+        // セリフを読む時間
+        await sleep(isSkipping ? 0 : waits.QUOTE_DISPLAY);
+
+        // Phase 2: 名前表示
+        window.gachaView.updateRow(rowId, res, true);
+    } else {
+        // 通常 (一括表示)
+        await sleep(isSkipping ? 0 : 200);
+        window.gachaView.updateRow(rowId, res, true);
+    }
 }
 
 // =========================================

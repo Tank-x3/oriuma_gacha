@@ -342,10 +342,21 @@ header h1 {
 /* =========================================
    操作エリア
    ========================================= */
+/* =========================================
+   操作エリア
+   ========================================= */
 .control-area {
     display: flex;
-    justify-content: space-around;
+    justify-content: center;
+    width: 100%;
+}
+
+.control-group {
+    display: flex;
     gap: 10px;
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: center;
 }
 
 .gacha-btn {
@@ -392,6 +403,28 @@ header h1 {
 
 .action-btn:hover {
     background-color: #0b7dda;
+}
+
+.full-width {
+    width: 100%;
+    flex: 1 1 100%;
+}
+
+.skip-option-row {
+    text-align: center;
+    margin-top: 8px;
+    color: #aaa;
+    font-size: 14px;
+    cursor: default;
+    width: 100%;
+}
+
+.share-btn {
+    background-color: #9C27B0;
+}
+
+.share-btn:hover {
+    background-color: #7B1FA2;
 }
 
 .hidden {
