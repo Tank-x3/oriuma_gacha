@@ -1,0 +1,592 @@
+/* =========================================
+   基本設定・リセット
+   ========================================= */
+body {
+    background-color: #222;
+    /* 背景：濃いグレー */
+    color: #eee;
+    /* 文字色：白系 */
+    font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.main-container {
+    width: 100%;
+    max-width: 800px;
+    /* v0.07: ワイド画面対応のため拡張 */
+    background-color: #333;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+}
+
+/* =========================================
+   ヘッダー
+   ========================================= */
+header h1 {
+    text-align: center;
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #fff;
+    border-bottom: 2px solid #4CAF50;
+    /* ウマ娘イメージの緑 */
+    padding-bottom: 10px;
+}
+
+/* =========================================
+   ガチャ結果表示エリア
+   ========================================= */
+#display-area {
+    background-color: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 5px;
+    padding: 15px;
+    min-height: 300px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ゲートテキスト */
+.gate-text {
+    font-family: 'Times New Roman', serif;
+    font-style: italic;
+    text-align: center;
+    font-size: 18px;
+    color: #FFD700;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #444;
+    min-height: 1.2em;
+}
+
+/* 結果リスト */
+#result-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+}
+
+/* 
+   v0.07: CSS Grid & Responsive Layout
+   ========================================= 
+*/
+.result-row {
+    padding: 10px 5px;
+    border-bottom: 1px dashed #333;
+    font-size: 16px;
+    display: flex;
+    flex-direction: column;
+    /* デフォルトは縦積み */
+    gap: 2px;
+}
+
+/* アイテムごとの個別スタイル */
+.cursor-marker {
+    display: inline-block;
+    width: 20px;
+    color: #4CAF50;
+    font-weight: bold;
+    margin-right: 5px;
+    flex-shrink: 0;
+}
+
+.blinking {
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.star-text {
+    font-weight: bold;
+    margin-right: 5px;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+    display: inline-block;
+    /* v0.07 Fix: モバイル(Flex)表示時のbackground-clip対策 */
+    align-self: flex-start;
+    /* v0.07 Fix: モバイル(Column)でStretchされてグラデーションが間延びするのを防ぐ */
+}
+
+/* タイトルと名前は折り返し禁止 */
+.char-title,
+.char-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.char-title {
+    color: #aaa;
+    font-size: 0.9em;
+}
+
+/* モバイル向け階段状レイアウト */
+/* 縦積み時のみインデントを適用 */
+@media (max-width: 599px) {
+    .char-title {
+        padding-left: 1.5em;
+        /* インデント */
+    }
+
+    .char-name {
+        padding-left: 3.5em;
+        /* さらにインデント (v0.07 Adjusted) */
+    }
+
+    /* v0.07 Fix: Quote alignment (Center block, Left text) */
+    .char-quote {
+        align-self: center;
+        width: fit-content;
+        max-width: 100%;
+        text-align: left;
+    }
+}
+
+/* PC / Wide Screen Layout (600px以上) */
+@media (min-width: 600px) {
+    .result-row {
+        /* 
+           行構成:
+           Row 1: Marker + Star + Title + Name
+           Row 2: Quote (if exists)
+        */
+        display: block;
+        /* Flex解除して通常のブロックフローへ（内部で並べる） */
+    }
+
+    /* 1行目に並べる要素をインラインまたはフレックスでラップすると良いが、
+       HTML構造がフラットなので、floatやinline-blockで対応するか、
+       あるいは .result-row 自体を flex-wrap: wrap にして調整する。
+       
+       ここでは flex-wrap: wrap を採用する。
+    */
+    .result-row {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: baseline;
+    }
+
+    .cursor-marker {
+        order: 1;
+    }
+
+    .star-text {
+        order: 2;
+        margin-right: 10px;
+        align-self: auto;
+        /* v0.07 PCではBaselineに戻す */
+    }
+
+    .char-title {
+        order: 3;
+        margin-right: 5px;
+    }
+
+    .char-name {
+        order: 4;
+        margin-right: auto;
+        /* 右余白を埋める */
+    }
+
+    .char-quote {
+        order: 5;
+        width: 100%;
+        /* 強制改行 */
+        padding-left: 60px;
+        /* インデント調整 (Marker+Star分) */
+        margin-top: 4px;
+    }
+
+    /* PCではインデント解除 */
+    .char-title,
+    .char-name {
+        padding-left: 0;
+    }
+}
+
+/* 
+   v0.07 Fix: 画像生成用の強制PCレイアウトクラス
+   (.force-desktop が付与されたコンテナ内では無条件でPCレイアウトを適用)
+*/
+.force-desktop .result-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+}
+
+.force-desktop .cursor-marker {
+    order: 1;
+}
+
+.force-desktop .star-text {
+    order: 2;
+    margin-right: 10px;
+}
+
+.force-desktop .char-title {
+    order: 3;
+    margin-right: 5px;
+    padding-left: 0;
+}
+
+.force-desktop .char-name {
+    order: 4;
+    margin-right: auto;
+    padding-left: 0;
+}
+
+.force-desktop .char-quote {
+    order: 5;
+    width: 100%;
+    padding-left: 60px;
+    margin-top: 4px;
+}
+
+
+/* プレースホルダーテキスト */
+.placeholder-text {
+    color: #777;
+    text-align: center;
+    margin-top: 50px;
+    width: 100%;
+}
+
+/* =========================================
+   レアリティ別装飾
+   ========================================= */
+/* ★1: 銀色/白 */
+.rarity-1 {
+    color: #ccc;
+}
+
+/* ★2: 金色 */
+.rarity-2 {
+    color: #FFD700;
+}
+
+/* ★3: 虹色 */
+.rarity-3 {
+    background: linear-gradient(to right, #ff5e62, #ff9966, #ffff00, #39ff14, #00ffff, #0000ff, #ff00ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    /* 標準プロパティ追加 */
+    color: transparent;
+    font-weight: 900;
+    display: inline-block;
+    /* Flexアイテム下での描画安定化 */
+}
+
+/* ★4: シークレット（激レア） */
+.rarity-4 {
+    background: linear-gradient(to right, #ff00cc, #333399, #ff00cc);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    /* 標準プロパティ追加 */
+    color: transparent;
+    font-weight: 900;
+    font-size: 1.2em;
+    text-shadow: 0 0 10px rgba(255, 0, 204, 0.5);
+    animation: shine 2s linear infinite;
+    display: inline-block;
+    /* Flexアイテム下での描画安定化 */
+}
+
+@keyframes shine {
+    to {
+        background-position: 200% center;
+    }
+}
+
+/* キャラクター名強調 */
+.char-name.rarity-3,
+.char-name.rarity-4 {
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+}
+
+/* 獲得時セリフ（★3, ★4のみ） */
+.char-quote {
+    font-size: 13px;
+    color: #bbb;
+    font-style: italic;
+    line-height: 1.4;
+    white-space: normal;
+    /* 折り返し許可 */
+}
+
+
+/* =========================================
+   操作エリア
+   ========================================= */
+/* =========================================
+   操作エリア
+   ========================================= */
+.control-area {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.control-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: center;
+}
+
+.gacha-btn {
+    flex: 1;
+    padding: 15px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: #555;
+    color: #fff;
+    transition: background-color 0.2s;
+}
+
+.gacha-btn:hover {
+    background-color: #666;
+}
+
+.gacha-btn.primary {
+    background-color: #4CAF50;
+    font-weight: bold;
+}
+
+.gacha-btn.primary:hover {
+    background-color: #45a049;
+}
+
+.gacha-btn:disabled {
+    background-color: #222;
+    color: #555;
+    cursor: not-allowed;
+}
+
+.action-btn {
+    flex: 1;
+    padding: 15px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: #2196F3;
+    color: white;
+}
+
+.action-btn:hover {
+    background-color: #0b7dda;
+}
+
+.full-width {
+    width: 100%;
+    flex: 1 1 100%;
+}
+
+.skip-option-row {
+    text-align: center;
+    margin-top: 8px;
+    color: #aaa;
+    font-size: 14px;
+    cursor: default;
+    width: 100%;
+}
+
+.share-btn {
+    background-color: #9C27B0;
+}
+
+.share-btn:hover {
+    background-color: #7B1FA2;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* =========================================
+   インフォメーションバナー
+   ========================================= */
+.info-banner {
+    background-color: #2c3e50;
+    color: #fff;
+    border: 1px solid #4CAF50;
+    border-left: 5px solid #4CAF50;
+    padding: 10px 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1.5;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.info-banner a {
+    color: #81C784;
+    text-decoration: underline;
+}
+
+/* =========================================
+   提供割合 & 履歴
+   ========================================= */
+.stats-container {
+    background-color: #222;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 15px;
+    font-size: 12px;
+    color: #aaa;
+    line-height: 1.6;
+}
+
+.stats-row {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px dashed #333;
+}
+
+.stats-row:last-child {
+    border-bottom: none;
+}
+
+.stats-label {
+    font-weight: bold;
+}
+
+.stats-value {
+    color: #ddd;
+}
+
+.footer-area {
+    margin-top: 15px;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.text-link-btn {
+    background: none;
+    border: none;
+    color: #888;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.text-link-btn:hover {
+    color: #fff;
+}
+
+/* モダル */
+.modal {
+    position: fixed;
+    z-index: 100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #333;
+    border: 1px solid #4CAF50;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close-btn:hover {
+    color: #fff;
+}
+
+.history-list-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #444;
+    background: #222;
+    padding: 5px;
+}
+
+.history-item {
+    padding: 8px;
+    border-bottom: 1px solid #333;
+    font-size: 13px;
+    display: flex;
+    align-items: baseline;
+}
+
+.history-date {
+    color: #666;
+    font-size: 11px;
+    margin-right: 8px;
+    width: 80px;
+}
+
+.history-name {
+    flex-grow: 1;
+}
+
+.clear-history-btn {
+    background-color: #555;
+    color: #ccc;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    align-self: flex-end;
+}
+
+.clear-history-btn:hover {
+    background-color: #d32f2f;
+    color: #fff;
+}
