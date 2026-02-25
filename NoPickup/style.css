@@ -453,6 +453,44 @@ header h1 {
 }
 
 /* =========================================
+   トリップメーター (F-050)
+   ========================================= */
+.trip-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background-color: #222;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 6px 10px;
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+.trip-display {
+    color: #ddd;
+    flex: 1;
+    font-weight: bold;
+}
+
+.trip-reset-btn {
+    background-color: #333;
+    color: #aaa;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.trip-reset-btn:hover {
+    background-color: #444;
+    color: #fff;
+    border-color: #777;
+}
+
+/* =========================================
    提供割合 & 履歴
    ========================================= */
 .stats-container {
@@ -503,6 +541,11 @@ header h1 {
 
 .text-link-btn:hover {
     color: #fff;
+}
+
+/* モーダル表示中の背景スクロールロック */
+body.modal-open {
+    overflow: hidden;
 }
 
 /* モダル */
@@ -589,4 +632,608 @@ header h1 {
 .clear-history-btn:hover {
     background-color: #d32f2f;
     color: #fff;
+}
+
+/* =========================================
+   エラー表示 (v0.11)
+   ========================================= */
+
+/* 致命的エラー (E-001/E-002): display-area 差替用 */
+.fatal-error-message {
+    color: #ff8a80;
+    background-color: #3a1a1a;
+    border: 1px solid #d32f2f;
+    border-left: 5px solid #d32f2f;
+    border-radius: 4px;
+    padding: 20px;
+    margin: 20px 0;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+/* R1確率異常警告 (E-104): stats-area 内表示 */
+.stats-warning {
+    color: #ffcc80;
+    background-color: #3a2e00;
+    border: 1px solid #FF9800;
+    border-radius: 4px;
+    padding: 6px 10px;
+    margin-top: 6px;
+    font-size: 12px;
+}
+
+/* =========================================
+   トースト通知 (v0.11)
+   ========================================= */
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 90%;
+    max-width: 480px;
+    pointer-events: none;
+}
+
+.toast {
+    background-color: #444;
+    color: #eee;
+    border-left: 4px solid #4CAF50;
+    border-radius: 6px;
+    padding: 12px 36px 12px 14px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    font-size: 14px;
+    line-height: 1.5;
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    pointer-events: auto;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast.toast-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast.toast-hiding {
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+.toast.toast-persistent {
+    border-left-color: #FF9800;
+    padding-bottom: 44px;
+}
+
+.toast-message {
+    display: block;
+    padding-right: 4px;
+}
+
+.toast-btn-area {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.toast-action-btn {
+    padding: 5px 12px;
+    font-size: 13px;
+    border: 1px solid #888;
+    border-radius: 4px;
+    background-color: #555;
+    color: #eee;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.toast-action-btn:hover {
+    background-color: #666;
+}
+
+.toast-close-btn {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.15s;
+}
+
+.toast-close-btn:hover {
+    color: #fff;
+}
+
+/* =========================================
+   統計モーダル (v0.12 / F-051)
+   ========================================= */
+
+/* モーダルコンテンツのサイズ上書き */
+.stats-modal-content {
+    max-width: 680px;
+    width: 95%;
+}
+
+/* スクロール可能ボディ（スクロールバー非表示） */
+.stats-modal-body {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding-right: 4px;
+    scrollbar-width: none;           /* Firefox */
+    -ms-overflow-style: none;        /* IE/Edge */
+}
+
+.stats-modal-body::-webkit-scrollbar {
+    display: none;                   /* Chrome/Safari */
+}
+
+/* セクション共通 */
+.stats-section {
+    margin-bottom: 24px;
+}
+
+.stats-section:last-child {
+    margin-bottom: 0;
+}
+
+.stats-section-title {
+    font-size: 14px;
+    color: #4CAF50;
+    border-bottom: 1px solid #444;
+    padding-bottom: 6px;
+    margin: 0 0 12px 0;
+    text-transform: none;
+}
+
+/* --- セクション1: 累計データ --- */
+.stats-summary-grid {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.stats-summary-item {
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 10px 16px;
+    min-width: 120px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stats-summary-label {
+    font-size: 11px;
+    color: #888;
+}
+
+.stats-summary-value {
+    font-size: 18px;
+    font-weight: bold;
+    color: #eee;
+}
+
+/* --- セクション2: レアリティ別排出実績テーブル --- */
+.stats-table-wrapper {
+    overflow-x: hidden;
+}
+
+.stats-rarity-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.stats-rarity-table th,
+.stats-rarity-table td {
+    padding: 8px 10px;
+    border: 1px solid #444;
+    text-align: center;
+}
+
+.stats-rarity-table thead th {
+    background-color: #2a2a2a;
+    color: #aaa;
+    font-size: 12px;
+}
+
+.stats-rarity-table tbody tr:hover {
+    background-color: #3a3a3a;
+}
+
+/* レアリティバッジ */
+.rarity-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.rarity-badge.rarity-pu {
+    background-color: #6a1a9a;
+    color: #e1bee7;
+}
+
+.rarity-badge.rarity-r4 {
+    background-color: #7a4f00;
+    color: #FFD700;
+}
+
+.rarity-badge.rarity-r3 {
+    background-color: #1a3a6a;
+    color: #90caf9;
+}
+
+.rarity-badge.rarity-r2 {
+    background-color: #1a4a2a;
+    color: #a5d6a7;
+}
+
+.rarity-badge.rarity-r1 {
+    background-color: #3a3a3a;
+    color: #bdbdbd;
+}
+
+/* スマートフォン: カード形式 */
+@media (max-width: 600px) {
+    .stats-rarity-table thead {
+        display: none;
+    }
+
+    .stats-rarity-table,
+    .stats-rarity-table tbody,
+    .stats-rarity-table tr,
+    .stats-rarity-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .stats-rarity-table tr {
+        border: 1px solid #444;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        padding: 8px;
+        background-color: #2a2a2a;
+    }
+
+    .stats-rarity-table td {
+        border: none;
+        padding: 4px 6px;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .stats-rarity-table td::before {
+        content: attr(data-label);
+        font-size: 11px;
+        color: #888;
+        min-width: 60px;
+    }
+
+
+}
+
+/* --- セクション3: PU排出詳細 --- */
+.stats-pu-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.stats-pu-list li {
+    background-color: #2a2a2a;
+    border: 1px solid #6a1a9a;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 13px;
+    color: #e1bee7;
+}
+
+/* --- セクション4: 最頻出TOP3 --- */
+.stats-top3-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.stats-top3-group {
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+.stats-top3-group > .rarity-badge {
+    margin-bottom: 8px;
+    display: inline-block;
+}
+
+.stats-top3-list {
+    list-style: decimal;
+    padding-left: 18px;
+    margin: 0;
+}
+
+.stats-top3-list li {
+    font-size: 12px;
+    color: #ccc;
+    padding: 3px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.stats-top3-count {
+    color: #888;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+/* --- セクション5: コンプリートチャレンジ (F-052) --- */
+.completion-progress-grid {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.completion-progress-item {
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 10px 16px;
+    flex: 1;
+    min-width: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.completion-progress-label {
+    font-size: 11px;
+    color: #888;
+}
+
+.completion-progress-value {
+    font-size: 14px;
+    color: #eee;
+}
+
+.complete-badge {
+    color: #4CAF50;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+.completion-records-subtitle {
+    font-size: 12px;
+    color: #888;
+    margin: 0 0 8px 0;
+    padding-top: 4px;
+    border-top: 1px dashed #444;
+}
+
+.stats-completion-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.stats-completion-table th,
+.stats-completion-table td {
+    padding: 8px 10px;
+    border: 1px solid #444;
+    text-align: center;
+}
+
+.stats-completion-table thead th {
+    background-color: #2a2a2a;
+    color: #aaa;
+    font-size: 12px;
+}
+
+.stats-completion-table tbody tr:hover {
+    background-color: #3a3a3a;
+}
+
+@media (max-width: 600px) {
+    .stats-completion-table thead {
+        display: none;
+    }
+
+    .stats-completion-table,
+    .stats-completion-table tbody,
+    .stats-completion-table tr,
+    .stats-completion-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .stats-completion-table tr {
+        border: 1px solid #444;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        padding: 8px;
+        background-color: #2a2a2a;
+    }
+
+    .stats-completion-table td {
+        border: none;
+        padding: 4px 6px;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .stats-completion-table td::before {
+        content: attr(data-label);
+        font-size: 11px;
+        color: #888;
+        min-width: 60px;
+    }
+}
+
+/* --- 共通: 空・プレースホルダーメッセージ --- */
+.stats-empty-msg,
+.stats-placeholder-msg {
+    color: #666;
+    font-size: 13px;
+    margin: 0;
+    padding: 10px 0;
+}
+
+/* =========================================
+   配信モード (F-053)
+   ========================================= */
+.broadcast-container {
+    display: flex;
+    align-items: center;
+    background-color: #1a1a2e;
+    border: 1px solid #3a3a6a;
+    border-radius: 4px;
+    padding: 6px 10px;
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+.broadcast-state {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.broadcast-label {
+    color: #9090cc;
+    flex: 1;
+    font-weight: bold;
+}
+
+.broadcast-label-active {
+    color: #ff7070;
+}
+
+.broadcast-btn {
+    background-color: #2a2a4a;
+    color: #aaa;
+    border: 1px solid #4a4a7a;
+    border-radius: 3px;
+    padding: 2px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.broadcast-btn:hover {
+    background-color: #3a3a6a;
+    color: #fff;
+    border-color: #7070aa;
+}
+
+.broadcast-end-btn {
+    background-color: #3a1a1a;
+    color: #ff9090;
+    border-color: #662222;
+}
+
+.broadcast-end-btn:hover {
+    background-color: #4a2020;
+    color: #ffcccc;
+    border-color: #993333;
+}
+
+/* =========================================
+   ヘルプモーダル (F-054)
+   ========================================= */
+
+.help-modal-content {
+    max-width: 600px;
+    width: 95%;
+}
+
+.help-modal-body {
+    margin-top: 12px;
+    overflow-y: auto;
+    max-height: calc(80vh - 100px);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.help-modal-body::-webkit-scrollbar {
+    display: none;
+}
+
+.help-key-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.help-key-table th,
+.help-key-table td {
+    border: 1px solid #444;
+    padding: 8px 10px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.help-key-table th {
+    background-color: #2a2a2a;
+    color: #aaa;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.help-key-table td:first-child {
+    white-space: nowrap;
+    font-weight: bold;
+}
+
+.help-key-table td {
+    color: #ccc;
+}
+
+kbd {
+    display: inline-block;
+    background-color: #2a2a2a;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: monospace;
+    font-size: 12px;
+    color: #ddd;
+    box-shadow: 0 1px 0 #333;
+    white-space: nowrap;
+}
+
+.help-note {
+    margin-top: 12px;
+    font-size: 11px;
+    color: #777;
+    text-align: center;
 }

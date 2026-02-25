@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>オリウマ ガチャシミュレーター</title>
-    <link rel="stylesheet" href="style.css?v=1.3">
+    <link rel="stylesheet" href="style.css?v=1.5">
 </head>
 
 <body>
@@ -18,6 +18,24 @@
         <div id="info-area" class="info-banner hidden"></div>
 
         <div id="stats-area" class="stats-container">
+        </div>
+
+        <div id="trip-area" class="trip-container">
+            <span id="trip-display" class="trip-display">🔄 Trip: 0回</span>
+            <button class="trip-reset-btn" onclick="resetTrip()">リセット</button>
+        </div>
+
+        <!-- 配信モード (F-053) -->
+        <div id="broadcast-area" class="broadcast-container">
+            <div id="broadcast-off" class="broadcast-state">
+                <span class="broadcast-label">📡 配信モード: OFF</span>
+                <button class="broadcast-btn" onclick="startBroadcast()">開始</button>
+            </div>
+            <div id="broadcast-on" class="broadcast-state hidden">
+                <span class="broadcast-label broadcast-label-active">📡 配信中: <span id="broadcast-count">0回</span></span>
+                <button class="broadcast-btn" onclick="openTempStats()">統計</button>
+                <button class="broadcast-btn broadcast-end-btn" onclick="endBroadcast()">終了</button>
+            </div>
         </div>
 
         <div id="display-area">
@@ -54,6 +72,7 @@
 
         <div class="footer-area">
             <button class="text-link-btn" onclick="openHistory()">📜 ガチャ履歴を見る</button>
+            <button class="text-link-btn" onclick="openStats()">📊 統計</button>
         </div>
     </div>
 
@@ -67,14 +86,93 @@
         </div>
     </div>
 
+    <div id="stats-modal" class="modal hidden">
+        <div class="modal-content stats-modal-content">
+            <span class="close-btn" onclick="closeStats()">&times;</span>
+            <h2 id="stats-modal-title">📊 統計</h2>
+            <div id="stats-modal-body" class="stats-modal-body">
+            </div>
+        </div>
+    </div>
+
+    <!-- ヘルプモーダル (F-054) -->
+    <div id="help-modal" class="modal hidden">
+        <div class="modal-content help-modal-content">
+            <span class="close-btn" onclick="closeHelp()">&times;</span>
+            <h2>⌨️ キーボードショートカット</h2>
+            <div class="help-modal-body">
+                <table class="help-key-table">
+                    <thead>
+                        <tr>
+                            <th>キー</th>
+                            <th>🏠 初期</th>
+                            <th>🎬 演出中</th>
+                            <th>📋 結果</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><kbd>Space</kbd> / <kbd>Enter</kbd></td>
+                            <td>—</td>
+                            <td>次の結果を表示</td>
+                            <td>もう一度引く</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>1</kbd></td>
+                            <td>単発ガチャ</td>
+                            <td>—</td>
+                            <td>単発ガチャ</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>0</kbd></td>
+                            <td>10連ガチャ</td>
+                            <td>—</td>
+                            <td>10連ガチャ</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>S</kbd></td>
+                            <td>—</td>
+                            <td>SKIP（残り全開示）</td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>P</kbd></td>
+                            <td>—</td>
+                            <td>—</td>
+                            <td>画像を保存</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>H</kbd></td>
+                            <td>このヘルプを表示</td>
+                            <td>このヘルプを表示</td>
+                            <td>このヘルプを表示</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>Esc</kbd></td>
+                            <td>—</td>
+                            <td>—</td>
+                            <td>回数選択へ戻る</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="help-note">※ テキスト入力中・他のモーダル表示中はショートカットが無効になります</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- トースト通知コンテナ -->
+    <div id="toast-container" class="toast-container"></div>
+
     <!-- Image Generation Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image-more/3.3.0/dom-to-image-more.min.js"></script>
 
-    <script src="config.js?v=1.3"></script>
-    <script src="characters.js?v=1.3"></script>
-    <script src="js/gacha_logic.js?v=1.4"></script>
-    <script src="js/gacha_view.js?v=1.4"></script>
-    <script src="js/main.js?v=1.4"></script>
+    <script src="config.js?v=1.4"></script>
+    <script src="characters.js?v=1.4"></script>
+    <script src="js/utils.js?v=0.12"></script>
+    <script src="js/gacha_logic.js?v=0.12"></script>
+    <script src="js/gacha_view.js?v=0.12"></script>
+    <script src="js/completion.js?v=0.12"></script>
+    <script src="js/main.js?v=0.13"></script>
 </body>
 
 </html>
