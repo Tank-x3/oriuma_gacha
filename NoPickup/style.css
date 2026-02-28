@@ -1107,6 +1107,17 @@ body.modal-open {
     padding: 10px 0;
 }
 
+/* --- 注意書き --- */
+.stats-note {
+    color: #888;
+    font-size: 12px;
+    margin: 4px 0 8px;
+    line-height: 1.5;
+}
+.stats-note p {
+    margin: 2px 0;
+}
+
 /* =========================================
    配信モード (F-053)
    ========================================= */

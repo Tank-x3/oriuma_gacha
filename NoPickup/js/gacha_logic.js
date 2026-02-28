@@ -127,9 +127,16 @@ class GachaLogic {
         // ピックアップ対象のリスト作成
         const pickupList = this._getPickupCharacters();
 
+        // ISS-003: PU設定時は★3リストからPU対象を除外（提供割合表示の正確性）
+        let r3List = CHARACTERS_R3;
+        if (PICKUP_CHAR_IDS.length > 0) {
+            const puIdStrs = PICKUP_CHAR_IDS.map(String);
+            r3List = CHARACTERS_R3.filter(c => !puIdStrs.includes(String(c.id)));
+        }
+
         return [
             { label: "PICKUP (★3)", rate: this.pickupTotalRate, list: pickupList },
-            { label: "★3 (SSR)", rate: RATES.R3, list: CHARACTERS_R3 },
+            { label: "★3 (SSR)", rate: RATES.R3, list: r3List },
             { label: "★2 (SR)", rate: RATES.R2, list: CHARACTERS_R2 },
             { label: "★1 (R)", rate: RATES.R1, list: CHARACTERS_R1 }
         ];
@@ -186,13 +193,15 @@ class GachaLogic {
 
     _findCharacterById(id) {
         // IDから全探索 (R4, R3, R2, R1の順)
-        let char = CHARACTERS_R4.find(c => c.id === id);
+        // 型安全: config側が数値、characters側が文字列の場合に備えて文字列比較
+        const sid = String(id);
+        let char = CHARACTERS_R4.find(c => String(c.id) === sid);
         if (char) return char;
-        char = CHARACTERS_R3.find(c => c.id === id);
+        char = CHARACTERS_R3.find(c => String(c.id) === sid);
         if (char) return char;
-        char = CHARACTERS_R2.find(c => c.id === id);
+        char = CHARACTERS_R2.find(c => String(c.id) === sid);
         if (char) return char;
-        char = CHARACTERS_R1.find(c => c.id === id);
+        char = CHARACTERS_R1.find(c => String(c.id) === sid);
         if (char) return char;
 
         return { id: id, name: "Unknown", quote: "" };
@@ -206,7 +215,15 @@ class GachaLogic {
         let list = [];
         if (rarity === 999) return { name: "GOD PACK", quote: "GOD PACK!!" };
         else if (rarity === 4) list = CHARACTERS_R4;
-        else if (rarity === 3) list = CHARACTERS_R3;
+        else if (rarity === 3) {
+            // ISS-003: PU対象キャラを★3通常プールから除外
+            if (PICKUP_CHAR_IDS.length > 0) {
+                const puIdStrs = PICKUP_CHAR_IDS.map(String);
+                list = CHARACTERS_R3.filter(c => !puIdStrs.includes(String(c.id)));
+            } else {
+                list = CHARACTERS_R3;
+            }
+        }
         else if (rarity === 2) list = CHARACTERS_R2;
         else list = CHARACTERS_R1;
 
@@ -314,9 +331,12 @@ class GachaLogic {
         const defaultStats = {
             firstPlayDate: null,
             totalDraws: 0,
-            rarity: { r1: 0, r2: 0, r3: 0, r4: 0 },
+            rarity: { r1: 0, r2: 0, r3: 0, r4: 0, pu: 0 },
             characters: {},
-            puDraws: {}
+            puDraws: {},
+            puConfig: [],
+            puPeriodStartDraws: 0,
+            puHistory: []
         };
         const loaded = safeGetItem(this.STATS_KEY, null, '統計データ');
         if (!loaded || typeof loaded !== 'object') return defaultStats;
@@ -325,9 +345,12 @@ class GachaLogic {
         return {
             firstPlayDate: loaded.firstPlayDate || null,
             totalDraws: typeof loaded.totalDraws === 'number' ? loaded.totalDraws : 0,
-            rarity: Object.assign({ r1: 0, r2: 0, r3: 0, r4: 0 }, loaded.rarity || {}),
+            rarity: Object.assign({ r1: 0, r2: 0, r3: 0, r4: 0, pu: 0 }, loaded.rarity || {}),
             characters: loaded.characters || {},
-            puDraws: loaded.puDraws || {}
+            puDraws: loaded.puDraws || {},
+            puConfig: Array.isArray(loaded.puConfig) ? loaded.puConfig : [],
+            puPeriodStartDraws: typeof loaded.puPeriodStartDraws === 'number' ? loaded.puPeriodStartDraws : 0,
+            puHistory: Array.isArray(loaded.puHistory) ? loaded.puHistory : []
         };
     }
 
@@ -347,15 +370,54 @@ class GachaLogic {
             stats.firstPlayDate = `${y}-${m}-${d}`;
         }
 
+        // PU設定変更検知: PICKUP_CHAR_IDS と stats.puConfig を比較
+        const currentPU = [...PICKUP_CHAR_IDS].sort();
+        const savedPU = [...stats.puConfig].sort();
+        const puChanged = currentPU.length !== savedPU.length ||
+            currentPU.some((id, i) => id !== savedPU[i]);
+
+        if (puChanged && stats.puConfig.length > 0) {
+            // 旧PUデータをアーカイブ
+            const puRarityCount = stats.rarity.pu || 0;
+            const totalDrawsInPeriod = stats.totalDraws - stats.puPeriodStartDraws;
+            stats.puHistory.push({
+                config: stats.puConfig,
+                draws: Object.assign({}, stats.puDraws),
+                puRarityCount: puRarityCount,
+                totalDrawsInPeriod: totalDrawsInPeriod
+            });
+
+            // 新PU期間開始: puDraws・rarity.puをリセット
+            stats.puDraws = {};
+            stats.rarity.pu = 0;
+            stats.puPeriodStartDraws = stats.totalDraws;
+        }
+
+        // puConfig を現在のPU設定に更新（初回 or 変更時）
+        if (puChanged) {
+            stats.puConfig = [...PICKUP_CHAR_IDS];
+            if (stats.puConfig.length > 0 && savedPU.length === 0) {
+                // 初回PU設定: 期間開始ポイントを記録
+                stats.puPeriodStartDraws = stats.totalDraws;
+            }
+        }
+
         // 各結果をカウント
         stats.totalDraws += results.length;
 
         results.forEach(res => {
-            // レアリティ別カウント
-            if (res.realRarity === 1) stats.rarity.r1++;
-            else if (res.realRarity === 2) stats.rarity.r2++;
-            else if (res.realRarity === 3) stats.rarity.r3++;
-            else if (res.realRarity === 4) stats.rarity.r4++;
+            // レアリティ別カウント（PUと★3は相互排他）
+            if (res.isPickup) {
+                stats.rarity.pu++;
+            } else if (res.realRarity === 4) {
+                stats.rarity.r4++;
+            } else if (res.realRarity === 3) {
+                stats.rarity.r3++;
+            } else if (res.realRarity === 2) {
+                stats.rarity.r2++;
+            } else {
+                stats.rarity.r1++;
+            }
 
             // キャラ別カウント
             if (res.character && res.character.id) {

@@ -253,6 +253,14 @@ const tempStatsManager = {
 };
 
 function initialize() {
+    // ISS-003: 統計データ強制リセット（CBT環境のデータ汚染解消）
+    const RESET_FLAG_KEY = 'oriuma_gacha_reset_iss003';
+    if (!localStorage.getItem(RESET_FLAG_KEY)) {
+        localStorage.removeItem('oriuma_gacha_stats_v1');
+        localStorage.setItem(RESET_FLAG_KEY, '1');
+        console.log('[ISS-003] 統計データを強制リセットしました');
+    }
+
     // インフォメーション表示
     if (typeof INFO_MESSAGE !== 'undefined') {
         window.gachaView.showInfo(INFO_MESSAGE);
@@ -537,24 +545,45 @@ function _buildStatsHTML(stats) {
         </div>`;
 
     // --- セクション2: レアリティ別排出実績 ---
+    // PU排出合計（puDrawsから算出）
     const puTotal = Object.values(stats.puDraws).reduce((a, b) => a + b, 0);
-    const r3Count = stats.rarity.r3 || 0;
+    const puRarityCount = stats.rarity.pu || 0;
+
+    // 既存データ補正: 旧データではPU排出が★3にも加算されていた
+    // 混入量 = puDraws合計 - rarity.pu（rarity.puが0の旧データでは全PU分が混入）
+    const puContamination = Math.max(0, puTotal - puRarityCount);
+    const correctedPuCount = puTotal; // PU排出の実数はpuDrawsが正
+    const r3Count = Math.max(0, (stats.rarity.r3 || 0) - puContamination);
     const r2Count = stats.rarity.r2 || 0;
     const r1Count = stats.rarity.r1 || 0;
     const r4Count = stats.rarity.r4 || 0;
+
+    // PU 1体あたり実績確率の計算
+    const puCharCount = (stats.puConfig && stats.puConfig.length > 0)
+        ? stats.puConfig.length
+        : PICKUP_CHAR_IDS.length;
+    const periodDraws = total - (stats.puPeriodStartDraws || 0);
+    let puPerCharPct;
+    if (periodDraws <= 0 || puCharCount === 0 || correctedPuCount === 0) {
+        puPerCharPct = '0.00%/体';
+    } else {
+        puPerCharPct = ((correctedPuCount / puCharCount) / periodDraws * 100).toFixed(2) + '%/体';
+    }
 
     const _pct = (count) => {
         if (total === 0) return '0.00%';
         return (count / total * 100).toFixed(2) + '%';
     };
 
-    const puRow = `
+    // PU未設定時（PICKUP_CHAR_IDSが空）はPU行を非表示
+    const hasPU = PICKUP_CHAR_IDS.length > 0;
+    const puRow = hasPU ? `
         <tr>
             <td data-label="★"><span class="rarity-badge rarity-pu">PU</span></td>
-            <td data-label="回数">${puTotal.toLocaleString()}回</td>
-            <td data-label="実績確率">${_pct(puTotal)}</td>
+            <td data-label="回数">${correctedPuCount.toLocaleString()}回</td>
+            <td data-label="実績確率">${puPerCharPct}</td>
             <td data-label="期待値">${PICKUP_RATE_PER_CHAR.toFixed(2)}%/体</td>
-        </tr>`;
+        </tr>` : '';
     const r3Row = `
         <tr>
             <td data-label="★"><span class="rarity-badge rarity-r3">★3</span></td>
@@ -584,9 +613,18 @@ function _buildStatsHTML(stats) {
             <td data-label="期待値">???</td>
         </tr>` : '';
 
+    // 注意書き（常時表示 + PU履歴がある場合の追記）
+    const hasPuHistory = stats.puHistory && stats.puHistory.length > 0;
+    let noteLines = ['※ 10連では★2以上確定枠があるため、10連のみを回している場合は★2の実績確率が期待値より高くなります。'];
+    if (hasPuHistory) {
+        noteLines.push('※ PU対象変更時、PUの回数はリセットされます（総ガチャ回数はリセットされません）。そのため表内の回数合計と総ガチャ回数が一致しない場合があります。過去のPU記録と合算すると一致します。');
+    }
+    const puNoteHTML = `
+            <div class="stats-note">${noteLines.map(l => `<p>${l}</p>`).join('')}</div>`;
+
     const section2 = `
         <div class="stats-section">
-            <h3 class="stats-section-title">レアリティ別排出実績</h3>
+            <h3 class="stats-section-title">レアリティ別排出実績</h3>${puNoteHTML}
             <div class="stats-table-wrapper">
                 <table class="stats-rarity-table">
                     <thead>
@@ -605,22 +643,75 @@ function _buildStatsHTML(stats) {
         </div>`;
 
     // --- セクション3: PU排出詳細 ---
-    let puDetailHTML = '';
+    // 現在のPU期間: 各キャラ名・回数・個別実績確率
+    let puCurrentHTML = '';
     const puEntries = Object.entries(stats.puDraws);
-    if (puEntries.length === 0) {
-        puDetailHTML = '<p class="stats-empty-msg">PU排出実績なし</p>';
+    if (!hasPU) {
+        puCurrentHTML = '<p class="stats-empty-msg">現在はPU対象が設定されていません</p>';
+    } else if (puEntries.length === 0) {
+        puCurrentHTML = '<p class="stats-empty-msg">PU排出実績なし</p>';
     } else {
-        puDetailHTML = '<ul class="stats-pu-list">';
+        puCurrentHTML = '<ul class="stats-pu-list">';
         puEntries.forEach(([id, count]) => {
             const char = window.gachaLogic._findCharacterById(id);
-            puDetailHTML += `<li>${char.name}: ${count}回</li>`;
+            const charPct = periodDraws > 0
+                ? (count / periodDraws * 100).toFixed(2) + '%'
+                : '0.00%';
+            puCurrentHTML += `<li>${char.name}: ${count}回（${charPct}）</li>`;
         });
-        puDetailHTML += '</ul>';
+        puCurrentHTML += '</ul>';
     }
+
+    // 過去PU記録（puHistory）の折りたたみ表示
+    let puHistoryHTML = '';
+    if (stats.puHistory && stats.puHistory.length > 0) {
+        let historyContent = '';
+        stats.puHistory.forEach((record, idx) => {
+            const configNames = record.config.map(id => {
+                const char = window.gachaLogic._findCharacterById(id);
+                return char.name;
+            });
+            const recPeriodDraws = record.totalDrawsInPeriod || 0;
+            const recPuCount = record.puRarityCount || 0;
+            const recCharCount = record.config.length || 1;
+            const recPerCharPct = recPeriodDraws > 0 && recCharCount > 0
+                ? ((recPuCount / recCharCount) / recPeriodDraws * 100).toFixed(2) + '%/体'
+                : '0.00%/体';
+
+            let drawsDetail = '';
+            const drawEntries = Object.entries(record.draws || {});
+            if (drawEntries.length > 0) {
+                drawsDetail = '<ul class="stats-pu-list">';
+                drawEntries.forEach(([id, count]) => {
+                    const char = window.gachaLogic._findCharacterById(id);
+                    const charPct = recPeriodDraws > 0
+                        ? (count / recPeriodDraws * 100).toFixed(2) + '%'
+                        : '0.00%';
+                    drawsDetail += `<li>${char.name}: ${count}回（${charPct}）</li>`;
+                });
+                drawsDetail += '</ul>';
+            }
+
+            historyContent += `
+                <div class="stats-pu-history-item">
+                    <p><strong>期間${idx + 1}:</strong> ${configNames.join('、')}</p>
+                    <p>合計${recPuCount}回 / ${recPeriodDraws.toLocaleString()}連中 / ${recPerCharPct}</p>
+                    ${drawsDetail}
+                </div>`;
+        });
+
+        puHistoryHTML = `
+            <details class="stats-pu-history">
+                <summary>過去のPU記録（${stats.puHistory.length}期間）</summary>
+                ${historyContent}
+            </details>`;
+    }
+
     const section3 = `
         <div class="stats-section">
             <h3 class="stats-section-title">PU排出（詳細）</h3>
-            ${puDetailHTML}
+            ${puCurrentHTML}
+            ${puHistoryHTML}
         </div>`;
 
     // --- セクション4: 最頻出キャラ TOP3 / レアリティ別 ---
@@ -632,10 +723,23 @@ function _buildStatsHTML(stats) {
     };
 
     // キャラIDをレアリティ別に分類して集計
+    // ISS-003: ★3カウントからPU排出分を差し引く
     const byRarity = { 4: [], 3: [], 2: [], 1: [] };
     Object.entries(stats.characters).forEach(([id, count]) => {
         const r = _getRarityFromId(id);
-        if (byRarity[r]) byRarity[r].push({ id, count });
+        if (r === 3) {
+            // 全PU排出回数 = 現行puDraws + 過去puHistory分
+            let puTotal = (stats.puDraws && stats.puDraws[id]) ? stats.puDraws[id] : 0;
+            if (stats.puHistory) {
+                stats.puHistory.forEach(h => {
+                    if (h.draws && h.draws[id]) puTotal += h.draws[id];
+                });
+            }
+            const adjusted = count - puTotal;
+            if (adjusted > 0) byRarity[3].push({ id, count: adjusted });
+        } else {
+            if (byRarity[r]) byRarity[r].push({ id, count });
+        }
     });
 
     const _buildTop3 = (rarity) => {
@@ -878,10 +982,17 @@ function _buildTempStatsHTML(tempData) {
         return 1;
     };
 
+    // ISS-003: ★3カウントからPU排出分を差し引く（配信モード統計）
     const byRarity = { 4: [], 3: [], 2: [], 1: [] };
     Object.entries(tempData.characterCounts || {}).forEach(([id, count]) => {
         const r = _getRarityFromId(id);
-        if (byRarity[r]) byRarity[r].push({ id, count });
+        if (r === 3) {
+            const puCount = (tempData.puDetails && tempData.puDetails[id]) ? tempData.puDetails[id] : 0;
+            const adjusted = count - puCount;
+            if (adjusted > 0) byRarity[3].push({ id, count: adjusted });
+        } else {
+            if (byRarity[r]) byRarity[r].push({ id, count });
+        }
     });
 
     const _buildTop3 = (rarity) => {
