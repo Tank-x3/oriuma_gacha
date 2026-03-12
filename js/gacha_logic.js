@@ -10,6 +10,7 @@
 class GachaLogic {
     constructor() {
         this.HISTORY_KEY = 'oriuma_gacha_history_v1';
+        this.STATS_KEY = 'oriuma_gacha_stats_v1';
 
         // 初期化処理: R1確率の自動計算
         this._initRates();
@@ -36,6 +37,14 @@ class GachaLogic {
         RATES.R1 = Math.round(RATES.R1 * 1000) / 1000;
 
         console.log("Calculated R1 Rate:", RATES.R1, "%");
+
+        // E-104: R1確率異常チェック
+        if (RATES.R1 < 0) {
+            const msg = `⚠️ 確率設定に異常があります。管理者にお知らせください。（R1: ${RATES.R1}%）`;
+            console.warn('[E-104]', msg);
+            // stats-area への警告表示は renderStats 後に行うため、フラグで保持
+            this._rateError = msg;
+        }
     }
 
     /**
@@ -118,9 +127,16 @@ class GachaLogic {
         // ピックアップ対象のリスト作成
         const pickupList = this._getPickupCharacters();
 
+        // ISS-003: PU設定時は★3リストからPU対象を除外（提供割合表示の正確性）
+        let r3List = CHARACTERS_R3;
+        if (PICKUP_CHAR_IDS.length > 0) {
+            const puIdStrs = PICKUP_CHAR_IDS.map(String);
+            r3List = CHARACTERS_R3.filter(c => !puIdStrs.includes(String(c.id)));
+        }
+
         return [
             { label: "PICKUP (★3)", rate: this.pickupTotalRate, list: pickupList },
-            { label: "★3 (SSR)", rate: RATES.R3, list: CHARACTERS_R3 },
+            { label: "★3 (SSR)", rate: RATES.R3, list: r3List },
             { label: "★2 (SR)", rate: RATES.R2, list: CHARACTERS_R2 },
             { label: "★1 (R)", rate: RATES.R1, list: CHARACTERS_R1 }
         ];
@@ -131,7 +147,7 @@ class GachaLogic {
      * @returns {Array} 履歴リスト
      */
     getHistory() {
-        return JSON.parse(localStorage.getItem(this.HISTORY_KEY)) || [];
+        return safeGetItem(this.HISTORY_KEY, [], '履歴');
     }
 
     /**
@@ -177,13 +193,15 @@ class GachaLogic {
 
     _findCharacterById(id) {
         // IDから全探索 (R4, R3, R2, R1の順)
-        let char = CHARACTERS_R4.find(c => c.id === id);
+        // 型安全: config側が数値、characters側が文字列の場合に備えて文字列比較
+        const sid = String(id);
+        let char = CHARACTERS_R4.find(c => String(c.id) === sid);
         if (char) return char;
-        char = CHARACTERS_R3.find(c => c.id === id);
+        char = CHARACTERS_R3.find(c => String(c.id) === sid);
         if (char) return char;
-        char = CHARACTERS_R2.find(c => c.id === id);
+        char = CHARACTERS_R2.find(c => String(c.id) === sid);
         if (char) return char;
-        char = CHARACTERS_R1.find(c => c.id === id);
+        char = CHARACTERS_R1.find(c => String(c.id) === sid);
         if (char) return char;
 
         return { id: id, name: "Unknown", quote: "" };
@@ -197,12 +215,23 @@ class GachaLogic {
         let list = [];
         if (rarity === 999) return { name: "GOD PACK", quote: "GOD PACK!!" };
         else if (rarity === 4) list = CHARACTERS_R4;
-        else if (rarity === 3) list = CHARACTERS_R3;
+        else if (rarity === 3) {
+            // ISS-003: PU対象キャラを★3通常プールから除外
+            if (PICKUP_CHAR_IDS.length > 0) {
+                const puIdStrs = PICKUP_CHAR_IDS.map(String);
+                list = CHARACTERS_R3.filter(c => !puIdStrs.includes(String(c.id)));
+            } else {
+                list = CHARACTERS_R3;
+            }
+        }
         else if (rarity === 2) list = CHARACTERS_R2;
         else list = CHARACTERS_R1;
 
         if (!list || list.length === 0) {
-            // データがない場合のフォールバック
+            // E-103: キャラリスト空
+            const msg = '⚠️ キャラクターデータに不整合があります。管理者にお知らせください。';
+            console.error(`[E-103] rarity=${rarity}`, msg);
+            if (window.toastManager) window.toastManager.show(msg);
             return { id: "000", name: "データなし", quote: "" };
         }
         const index = Math.floor(Math.random() * list.length);
@@ -289,6 +318,131 @@ class GachaLogic {
         return GATE_TEXTS.LOW;
     }
 
+    // =========================================
+    // 統計データ (F-051)
+    // =========================================
+
+    /**
+     * 統計データをローカルストレージから読み込む（E-207対応）
+     * @returns {Object} 統計データ
+     * @private
+     */
+    _loadStats() {
+        const defaultStats = {
+            firstPlayDate: null,
+            totalDraws: 0,
+            rarity: { r1: 0, r2: 0, r3: 0, r4: 0, pu: 0 },
+            characters: {},
+            puDraws: {},
+            puConfig: [],
+            puPeriodStartDraws: 0,
+            puHistory: []
+        };
+        const loaded = safeGetItem(this.STATS_KEY, null, '統計データ');
+        if (!loaded || typeof loaded !== 'object') return defaultStats;
+
+        // デフォルト値とマージして欠損キーを補完
+        return {
+            firstPlayDate: loaded.firstPlayDate || null,
+            totalDraws: typeof loaded.totalDraws === 'number' ? loaded.totalDraws : 0,
+            rarity: Object.assign({ r1: 0, r2: 0, r3: 0, r4: 0, pu: 0 }, loaded.rarity || {}),
+            characters: loaded.characters || {},
+            puDraws: loaded.puDraws || {},
+            puConfig: Array.isArray(loaded.puConfig) ? loaded.puConfig : [],
+            puPeriodStartDraws: typeof loaded.puPeriodStartDraws === 'number' ? loaded.puPeriodStartDraws : 0,
+            puHistory: Array.isArray(loaded.puHistory) ? loaded.puHistory : []
+        };
+    }
+
+    /**
+     * ガチャ結果を統計データに反映して保存する（E-203対応）
+     * @param {Array} results - draw() が返す results 配列
+     */
+    updateStats(results) {
+        const stats = this._loadStats();
+
+        // firstPlayDate: 初回のみセット
+        if (!stats.firstPlayDate) {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            stats.firstPlayDate = `${y}-${m}-${d}`;
+        }
+
+        // PU設定変更検知: PICKUP_CHAR_IDS と stats.puConfig を比較
+        const currentPU = [...PICKUP_CHAR_IDS].sort();
+        const savedPU = [...stats.puConfig].sort();
+        const puChanged = currentPU.length !== savedPU.length ||
+            currentPU.some((id, i) => id !== savedPU[i]);
+
+        if (puChanged && stats.puConfig.length > 0) {
+            // 旧PUデータをアーカイブ
+            const puRarityCount = stats.rarity.pu || 0;
+            const totalDrawsInPeriod = stats.totalDraws - stats.puPeriodStartDraws;
+            stats.puHistory.push({
+                config: stats.puConfig,
+                draws: Object.assign({}, stats.puDraws),
+                puRarityCount: puRarityCount,
+                totalDrawsInPeriod: totalDrawsInPeriod
+            });
+
+            // 新PU期間開始: puDraws・rarity.puをリセット
+            stats.puDraws = {};
+            stats.rarity.pu = 0;
+            stats.puPeriodStartDraws = stats.totalDraws;
+        }
+
+        // puConfig を現在のPU設定に更新（初回 or 変更時）
+        if (puChanged) {
+            stats.puConfig = [...PICKUP_CHAR_IDS];
+            if (stats.puConfig.length > 0 && savedPU.length === 0) {
+                // 初回PU設定: 期間開始ポイントを記録
+                stats.puPeriodStartDraws = stats.totalDraws;
+            }
+        }
+
+        // 各結果をカウント
+        stats.totalDraws += results.length;
+
+        results.forEach(res => {
+            // レアリティ別カウント（PUと★3は相互排他）
+            if (res.isPickup) {
+                stats.rarity.pu++;
+            } else if (res.realRarity === 4) {
+                stats.rarity.r4++;
+            } else if (res.realRarity === 3) {
+                stats.rarity.r3++;
+            } else if (res.realRarity === 2) {
+                stats.rarity.r2++;
+            } else {
+                stats.rarity.r1++;
+            }
+
+            // キャラ別カウント
+            if (res.character && res.character.id) {
+                const id = res.character.id;
+                stats.characters[id] = (stats.characters[id] || 0) + 1;
+            }
+
+            // PU排出カウント（排出時点でPU対象のキャラのみ）
+            if (res.isPickup && res.character && res.character.id) {
+                const id = res.character.id;
+                stats.puDraws[id] = (stats.puDraws[id] || 0) + 1;
+            }
+        });
+
+        safeSetItem(this.STATS_KEY, JSON.stringify(stats));
+    }
+
+    /**
+     * 統計データを取得する
+     * @returns {Object} 統計データ
+     */
+    getPlayStats() {
+        return this._loadStats();
+    }
+
     _saveHistory(results) {
         let history = this.getHistory();
 
@@ -309,7 +463,8 @@ class GachaLogic {
             history = history.slice(0, 100);
         }
 
-        localStorage.setItem(this.HISTORY_KEY, JSON.stringify(history));
+        // E-201: QuotaExceededError は safeSetItem 内で処理
+        safeSetItem(this.HISTORY_KEY, JSON.stringify(history));
     }
 }
 

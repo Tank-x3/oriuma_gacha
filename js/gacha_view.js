@@ -292,7 +292,10 @@ class GachaView {
 
     async generateImage() {
         if (!window.domtoimage) {
-            alert("画像生成ライブラリの読み込みに失敗しました。");
+            // E-101: dom-to-image ライブラリ未読み込み
+            const msg = '📷 画像保存機能が利用できません。ネットワーク接続を確認してページを再読み込みしてください。';
+            console.error('[E-101]', msg);
+            if (window.toastManager) window.toastManager.show(msg);
             return;
         }
 
@@ -380,8 +383,10 @@ class GachaView {
             link.click();
 
         } catch (error) {
-            console.error('Image generation failed:', error);
-            alert('画像の生成に失敗しました。');
+            // E-102: DOM→画像変換失敗
+            const msg = '📷 画像の生成に失敗しました。スクリーンショットをご利用ください。';
+            console.error('[E-102] Image generation failed:', error);
+            if (window.toastManager) window.toastManager.show(msg);
         } finally {
             // 5. お片付け
             document.body.removeChild(overlay);
