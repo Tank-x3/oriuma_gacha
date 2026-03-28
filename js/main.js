@@ -116,7 +116,9 @@ const tempStatsManager = {
                     isCompleted: false
                 },
                 completionCount: 0
-            }
+            },
+            charListApproved: false,
+            charListExpanded: false
         };
     },
 
@@ -206,6 +208,11 @@ const tempStatsManager = {
 
         this._checkTempCompletion();
         this._save(); // E-205: 失敗時は safeSetItem のトーストで通知
+
+        // F-055: キャラリストのリアルタイム更新
+        if (this.data.charListApproved && this.data.charListExpanded) {
+            _renderCharList();
+        }
     },
 
     _checkTempCompletion() {
@@ -297,6 +304,15 @@ function initialize() {
     if (tempStatsManager.data && tempStatsManager.data.isActive) {
         completionManager.suppressToast = true;
         completionManager._loadPendingToasts();
+
+        // F-055: キャラリストの復元
+        _showCharListArea(true);
+        if (tempStatsManager.data.charListApproved) {
+            if (tempStatsManager.data.charListExpanded) {
+                _renderCharList();
+            }
+            _updateCharListUI();
+        }
     }
 
     // モーダル外側クリックイベント（履歴・統計・ヘルプ共通）
@@ -409,6 +425,128 @@ function resetGacha() {
 }
 
 // =========================================
+// キャラクターリスト (F-055)
+// =========================================
+
+/**
+ * キャラリストエリア全体の表示/非表示を切り替える
+ * @param {boolean} show - 表示するかどうか
+ */
+function _showCharListArea(show) {
+    const area = document.getElementById('charlist-area');
+    if (!area) return;
+    if (show) {
+        area.classList.remove('hidden');
+    } else {
+        area.classList.add('hidden');
+        const panel = document.getElementById('charlist-panel');
+        if (panel) {
+            panel.classList.add('hidden');
+            panel.innerHTML = '';
+        }
+        // トグルボタンをリセット
+        const btn = area.querySelector('.charlist-toggle-btn');
+        if (btn) btn.textContent = '表示▼';
+    }
+}
+
+/**
+ * キャラリストのトグルボタン押下時の処理
+ * 未承認時: 確認ダイアログ → 承認後リスト表示
+ * 承認済み: 展開/折りたたみの切り替え
+ */
+function toggleCharList() {
+    if (!tempStatsManager.data || !tempStatsManager.data.isActive) return;
+
+    // 初回: 確認ダイアログ
+    if (!tempStatsManager.data.charListApproved) {
+        if (!confirm('キャラクターリストを表示しますか？（キャラクター名が画面に表示されます）')) {
+            return;
+        }
+        tempStatsManager.data.charListApproved = true;
+        tempStatsManager.data.charListExpanded = true;
+        tempStatsManager._save();
+        _renderCharList();
+        _updateCharListUI();
+        return;
+    }
+
+    // 承認済み: トグル
+    tempStatsManager.data.charListExpanded = !tempStatsManager.data.charListExpanded;
+    tempStatsManager._save();
+    if (tempStatsManager.data.charListExpanded) {
+        _renderCharList();
+    }
+    _updateCharListUI();
+}
+
+/**
+ * キャラリストパネルの展開/折りたたみUIを更新する
+ */
+function _updateCharListUI() {
+    const panel = document.getElementById('charlist-panel');
+    const btn = document.querySelector('.charlist-toggle-btn');
+    if (!panel || !btn) return;
+
+    if (tempStatsManager.data && tempStatsManager.data.charListExpanded) {
+        panel.classList.remove('hidden');
+        btn.textContent = '非表示▲';
+    } else {
+        panel.classList.add('hidden');
+        btn.textContent = '表示▼';
+    }
+}
+
+/**
+ * キャラリストパネルの中身を描画する
+ * 5セクション: ★4 / ★3サイレント / ★3 / ★2 / ★1
+ */
+function _renderCharList() {
+    const panel = document.getElementById('charlist-panel');
+    if (!panel || !tempStatsManager.data) return;
+
+    const obtainedIds = tempStatsManager.data.completion.full.obtainedIds;
+
+    const sections = [
+        { title: '★4（シークレット）', chars: CHARACTERS_R4, hideNames: true, rarity: 4 },
+        { title: '★3（サイレント実装）', chars: CHARACTERS_R3.filter(c => c.silent === true), hideNames: true, rarity: '3s' },
+        { title: '★3', chars: CHARACTERS_R3.filter(c => !c.silent), hideNames: false, rarity: 3 },
+        { title: '★2', chars: CHARACTERS_R2, hideNames: false, rarity: 2 },
+        { title: '★1', chars: CHARACTERS_R1, hideNames: false, rarity: 1 }
+    ];
+
+    let html = '';
+    sections.forEach(section => {
+        if (section.chars.length === 0) return;
+
+        const obtainedCount = section.chars.filter(c => obtainedIds.includes(c.id)).length;
+        const totalCount = section.chars.length;
+        const rarityClass = section.rarity === '3s' ? '3s' : section.rarity;
+
+        html += `<div class="charlist-section">`;
+        html += `<div class="charlist-section-header charlist-rarity-${rarityClass}">`;
+        html += `<span class="charlist-section-title">${section.title}</span>`;
+        html += `<span class="charlist-section-count">獲得: ${obtainedCount}/${totalCount}</span>`;
+        html += `</div>`;
+
+        section.chars.forEach(char => {
+            const isObtained = obtainedIds.includes(char.id);
+            if (isObtained) {
+                html += `<div class="charlist-row charlist-obtained">✓ ${char.name}</div>`;
+            } else if (section.hideNames) {
+                html += `<div class="charlist-row charlist-unknown">？？？</div>`;
+            } else {
+                html += `<div class="charlist-row charlist-not-obtained">${char.name}</div>`;
+            }
+        });
+
+        html += `</div>`;
+    });
+
+    panel.innerHTML = html;
+}
+
+// =========================================
 // ヘルプモーダル (F-054)
 // =========================================
 
@@ -472,6 +610,8 @@ function startBroadcast() {
     if (tempStatsManager.start()) {
         // 配信中はメイン統計のコンプリートトーストを抑制する (F-053)
         completionManager.suppressToast = true;
+        // F-055: キャラリストのトグルボタンを表示
+        _showCharListArea(true);
     }
 }
 
@@ -503,6 +643,9 @@ function endBroadcast() {
     }
     tempStatsManager.data = null;
     tempStatsManager._renderUI(false);
+
+    // F-055: キャラリストを非表示・リセット
+    _showCharListArea(false);
 
     // 配信中に保留していたメイン統計のコンプリート通知を即時表示 (F-053)
     completionManager.suppressToast = false;
@@ -1103,6 +1246,7 @@ window.openTempStats = openTempStats;
 window.endBroadcast = endBroadcast;
 window.openHelp = openHelp;
 window.closeHelp = closeHelp;
+window.toggleCharList = toggleCharList;
 
 // シェアボタン制御関数は廃止
 

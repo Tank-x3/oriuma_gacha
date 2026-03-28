@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>オリウマ ガチャシミュレーター</title>
-    <link rel="stylesheet" href="style.css?v=1.5">
+    <link rel="stylesheet" href="style.css?v=1.6">
 </head>
 
 <body>
@@ -35,6 +35,16 @@
                 <span class="broadcast-label broadcast-label-active">📡 配信中: <span id="broadcast-count">0回</span></span>
                 <button class="broadcast-btn" onclick="openTempStats()">統計</button>
                 <button class="broadcast-btn broadcast-end-btn" onclick="endBroadcast()">終了</button>
+            </div>
+        </div>
+
+        <!-- キャラクターリスト (F-055) -->
+        <div id="charlist-area" class="charlist-container hidden">
+            <div class="charlist-toggle-bar">
+                <span class="charlist-label">📋 キャラリスト</span>
+                <button class="charlist-toggle-btn" onclick="toggleCharList()">表示▼</button>
+            </div>
+            <div id="charlist-panel" class="charlist-panel hidden">
             </div>
         </div>
 
@@ -172,7 +182,7 @@
     <script src="js/gacha_logic.js?v=0.12"></script>
     <script src="js/gacha_view.js?v=0.12"></script>
     <script src="js/completion.js?v=0.12"></script>
-    <script src="js/main.js?v=0.13"></script>
+    <script src="js/main.js?v=0.14"></script>
 </body>
 
 </html>
