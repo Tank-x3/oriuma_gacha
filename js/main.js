@@ -532,7 +532,8 @@ function _renderCharList() {
         section.chars.forEach(char => {
             const isObtained = obtainedIds.includes(char.id);
             if (isObtained) {
-                html += `<div class="charlist-row charlist-obtained">✓ ${char.name}</div>`;
+                const count = tempStatsManager.data.characterCounts[char.id] || 0;
+                html += `<div class="charlist-row charlist-obtained">✓ ${char.name} <span class="charlist-count">×${count}</span></div>`;
             } else if (section.hideNames) {
                 html += `<div class="charlist-row charlist-unknown">？？？</div>`;
             } else {
